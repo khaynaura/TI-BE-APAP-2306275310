@@ -22,7 +22,11 @@ public interface InsurancePlanRepository extends JpaRepository<InsurancePlan, St
     // for create policy
     List<InsurancePlan> findByApplicableServiceContainingAndDeletedAtIsNull(ServiceEnum service);
 
+    List<InsurancePlan> findAllByDeletedAtIsNullAndPlanNameContainingIgnoreCase(String planName);
+    
     // count all plan, including yg di soft delete
     @Query(value = "SELECT count(*) FROM insurance_plan", nativeQuery = true)
     long countAll();
+
+    long countByDeletedAtIsNull();
 }
