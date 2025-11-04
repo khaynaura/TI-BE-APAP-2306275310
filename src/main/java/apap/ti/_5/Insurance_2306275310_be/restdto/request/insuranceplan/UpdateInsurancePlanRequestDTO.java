@@ -15,24 +15,27 @@ import java.util.List;
 @AllArgsConstructor
 public class UpdateInsurancePlanRequestDTO {
 
-    @NotBlank(message = "Plan name must not be empty")
+    @NotBlank(message = "Insurance Plan ID must not be blank")
+    private String id; 
+
+    @NotBlank(message = "Plan Name must not be blank")
     private String planName;
 
     @NotNull(message = "Price must not be null")
-    @Min(value = 1, message = "Price must be positive")
+    @Min(value = 1, message = "Price must be at least 1")
     private Integer price;
 
     @NotNull(message = "Coverage must not be null")
-    @Min(value = 1, message = "Coverage must be positive")
+    @Min(value = 1, message = "Coverage must be at least 1")
     private Integer coverage;
 
-    @NotBlank(message = "Coverage details must not be empty")
+    @NotBlank(message = "Coverage Details must not be blank")
     private String coverageDetails;
 
-    @NotEmpty(message = "Applicable services must not be empty")
+    @NotEmpty(message = "Applicable Service must not be empty")
     private List<ServiceEnum> applicableService;
 
-    @NotNull(message = "Expired by days must not be null")
-    @Min(value = 1, message = "Expired by days must be at least 1 day")
+    @NotNull(message = "Expired by Days must not be null")
+    @Min(value = 1, message = "Expired by Days must be at least 1")
     private Integer expiredByDays;
 }
