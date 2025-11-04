@@ -57,7 +57,6 @@ public class PolicyServiceImpl implements PolicyService {
         policy.setTotalPrice(totalPrice);
         policy.setTotalCoverage(totalCoverage);
 
-
         List<OrderedPlan> orderedPlans = new ArrayList<>();
         int i = 1;
         for (InsurancePlan plan : plans) {

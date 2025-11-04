@@ -195,6 +195,76 @@ public class Insurance2306275310BeApplication {
                     System.out.println("Failed to submit/process claim: " + e.getMessage());
                 }
             }
+            System.out.println(createdPlans.size() + " dummy insurance plans generated successfully.");
+
+            // ==================================================================
+            // 2. Buat 15 Policy (dan OrderedPlan)
+            // ==================================================================
+            System.out.println("Generating dummy policies...");
+            List<PolicyResponseDTO> createdPolicies = new ArrayList<>();
+            for (int j = 0; j < 15; j++) {
+                try {
+                    String userId = "USER-" + faker.name().firstName().toUpperCase();
+                    String bookingId = "BOOK-" + faker.number().digits(6);
+
+                    // Pilih service secara acak
+                    ServiceEnum service = allServices[faker.random().nextInt(allServices.length)];
+
+                    // Ambil plan yang sesuai dengan service
+                    List<String> applicablePlanIds = createdPlans.stream()
+                            .filter(p -> p.getApplicableService().contains(service))
+                            .map(InsurancePlanResponseDTO::getId)
+                            .collect(Collectors.toList());
+
+                    if (applicablePlanIds.isEmpty()) continue; // Skip jika tidak ada plan yg cocok
+
+                    // Pilih 1 atau 2 plan secara acak
+                    Collections.shuffle(applicablePlanIds);
+                    List<String> selectedPlanIds = applicablePlanIds.stream()
+                            .limit(faker.number().numberBetween(1, 3)) // Ambil 1 atau 2 plan
+                            .collect(Collectors.toList());
+
+                    if (selectedPlanIds.isEmpty()) continue;
+
+                    // Buat Policy DTO
+                    CreatePolicyRequestDTO policyDTO = CreatePolicyRequestDTO.builder()
+                            .userId(userId)
+                            .bookingId(bookingId)
+                            .service(service)
+                            .insurancePlanIds(selectedPlanIds)
+                            .build();
+
+                    // Panggil service untuk membuat policy
+                    PolicyResponseDTO newPolicy = policyService.createPolicy(policyDTO);
+                    createdPolicies.add(newPolicy);
+
+                    // --- Modifikasi createdAt untuk data Chart Statistik ---
+                    List<OrderedPlan> ops = orderedPlanRepository.findAllById(
+                        newPolicy.getOrderedPlans().stream()
+                                .map(op -> op.getId())
+                                .collect(Collectors.toList())
+                    );
+                    
+                    for (OrderedPlan op : ops) {
+                        int monthsToSubtract = faker.number().numberBetween(0, 12); // Data 12 bulan
+                        op.setCreatedAt(LocalDateTime.now().minusMonths(monthsToSubtract));
+                        orderedPlanRepository.save(op);
+                    }
+                    // ----------------------------------------------------
+
+                } catch (Exception e) {
+                    System.out.println("Failed to create dummy policy: " + e.getMessage());
+                }
+            }
+            System.out.println(createdPolicies.size() + " dummy policies generated.");
+
+
+            // ==================================================================
+            // 3. "Bayar" 10 dari Policy yang dibuat
+            // ==================================================================
+            System.out.println("Paying 10 dummy policies...");
+            List<PolicyResponseDTO> paidPolicies = new ArrayList<>();
+            Collections.shuffle(createdPolicies); // Acak list policy
             
             System.out.println("--- Varied Policy Status Generated ---");
             System.out.println("- FULLY_CLAIMED: " + fullyClaimedCount);
