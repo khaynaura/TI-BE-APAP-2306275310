@@ -19,20 +19,22 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api")
+// @CrossOrigin(origins = "http://localhost:5173") // Sesuaikan port Vue Anda
 public class InsurancePlanRestController {
 
     @Autowired
     private InsurancePlanService insurancePlanService;
 
+    // --- URL Constants (mengikuti gaya Anda) ---
     public static final String BASE_URL = "/insurance-plan";
     public static final String VIEW_PLAN = BASE_URL + "/{id}";
     public static final String CREATE_PLAN = BASE_URL + "/create";
     public static final String UPDATE_PLAN = BASE_URL + "/update";
     public static final String DELETE_PLAN = BASE_URL + "/delete/{id}";
 
-
+    // --- Get All Plans ---
     @GetMapping(BASE_URL)
-    public ResponseEntity<BaseResponseDTO<List<InsurancePlanResponseDTO>>> getAllPlans(
+public ResponseEntity<BaseResponseDTO<List<InsurancePlanResponseDTO>>> getAllPlans(
         @RequestParam(value = "search", required = false) String search) {
 
     var baseResponseDTO = new BaseResponseDTO<List<InsurancePlanResponseDTO>>();
@@ -78,7 +80,6 @@ public class InsurancePlanRestController {
         baseResponseDTO.setTimestamp(new Date());
         return new ResponseEntity<>(baseResponseDTO, HttpStatus.OK);
     }
-
 
     @PostMapping(CREATE_PLAN)
     public ResponseEntity<BaseResponseDTO<InsurancePlanResponseDTO>> createInsurancePlan(
