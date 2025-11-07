@@ -18,24 +18,21 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.AllArgsConstructor; 
 import org.springframework.stereotype.Service;
 
 @Service
 @Transactional
+@AllArgsConstructor
 public class StatisticsServiceImpl implements StatisticsService {
 
-    @Autowired
-    private InsurancePlanRepository insurancePlanRepository;
+    private final InsurancePlanRepository insurancePlanRepository;
 
-    @Autowired
-    private PolicyRepository policyRepository;
+    private final PolicyRepository policyRepository;
 
-    @Autowired
-    private ClaimRepository claimRepository;
+    private final ClaimRepository claimRepository;
 
-    @Autowired
-    private OrderedPlanRepository orderedPlanRepository;
+    private final OrderedPlanRepository orderedPlanRepository;
 
     @Override
     public HomeSummaryResponseDTO getHomeSummary() {

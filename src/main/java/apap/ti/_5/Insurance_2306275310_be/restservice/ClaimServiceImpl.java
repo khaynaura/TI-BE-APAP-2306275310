@@ -11,8 +11,8 @@ import apap.ti._5.Insurance_2306275310_be.restdto.request.claim.ProcessClaimRequ
 import apap.ti._5.Insurance_2306275310_be.restdto.response.claim.ClaimDetailResponseDTO;
 import apap.ti._5.Insurance_2306275310_be.restdto.response.claim.ClaimSummaryResponseDTO;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import lombok.AllArgsConstructor; 
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -23,16 +23,14 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
+@AllArgsConstructor
 public class ClaimServiceImpl implements ClaimService {
 
-    @Autowired
-    private ClaimRepository claimRepository;
+    private final ClaimRepository claimRepository;
 
-    @Autowired
-    private OrderedPlanRepository orderedPlanRepository;
+    private final OrderedPlanRepository orderedPlanRepository;
 
-    @Autowired
-    private PolicyRepository policyRepository;
+    private final PolicyRepository policyRepository;
 
     @Override
     public List<ClaimSummaryResponseDTO> getAllClaimsFiltered(String status, String insurancePlanId) {

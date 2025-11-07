@@ -4,7 +4,7 @@ import apap.ti._5.Insurance_2306275310_be.restdto.BaseResponseDTO;
 import apap.ti._5.Insurance_2306275310_be.restdto.response.statistics.ChartDataResponseDTO;
 import apap.ti._5.Insurance_2306275310_be.restdto.response.statistics.HomeSummaryResponseDTO;
 import apap.ti._5.Insurance_2306275310_be.restservice.StatisticsService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.AllArgsConstructor; 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,11 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Date;
 
 @RestController
+@AllArgsConstructor
 @RequestMapping("/api/statistics")
 public class StatisticsRestController {
 
-    @Autowired
-    private StatisticsService statisticsService;
+    private final StatisticsService statisticsService;
 
     public static final String SUMMARY_URL = "/summary";
     public static final String CHART_URL = "/chart";

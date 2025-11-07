@@ -7,7 +7,7 @@ import apap.ti._5.Insurance_2306275310_be.restdto.request.insuranceplan.UpdateIn
 import apap.ti._5.Insurance_2306275310_be.restdto.response.insuranceplan.InsurancePlanResponseDTO;
 import apap.ti._5.Insurance_2306275310_be.restservice.InsurancePlanService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.AllArgsConstructor; 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -18,11 +18,11 @@ import java.util.Date;
 import java.util.List;
 
 @RestController
+@AllArgsConstructor
 @RequestMapping("/api")
 public class InsurancePlanRestController {
 
-    @Autowired
-    private InsurancePlanService insurancePlanService;
+    private final InsurancePlanService insurancePlanService;
 
     public static final String BASE_URL = "/insurance-plan";
     public static final String VIEW_PLAN = BASE_URL + "/{id}";

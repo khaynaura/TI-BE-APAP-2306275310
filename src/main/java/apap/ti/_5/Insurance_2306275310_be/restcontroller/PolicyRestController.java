@@ -5,7 +5,8 @@ import apap.ti._5.Insurance_2306275310_be.restdto.request.policy.CreatePolicyReq
 import apap.ti._5.Insurance_2306275310_be.restdto.response.policy.PolicyResponseDTO;
 import apap.ti._5.Insurance_2306275310_be.restservice.PolicyService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.AllArgsConstructor;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -16,11 +17,11 @@ import java.util.Date;
 import java.util.List;
 
 @RestController
+@AllArgsConstructor
 @RequestMapping("/api/policy")
 public class PolicyRestController {
 
-    @Autowired
-    private PolicyService policyService;
+    private final PolicyService policyService;
 
     public static final String GET_ALL = "";
     public static final String GET_BY_ID = "/{id}";

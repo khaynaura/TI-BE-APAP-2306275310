@@ -3,7 +3,7 @@ package apap.ti._5.Insurance_2306275310_be.restcontroller;
 import apap.ti._5.Insurance_2306275310_be.restdto.BaseResponseDTO;
 import apap.ti._5.Insurance_2306275310_be.restdto.response.orderedplan.OrderedPlanDetailResponseDTO;
 import apap.ti._5.Insurance_2306275310_be.restservice.OrderedPlanService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.AllArgsConstructor; 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,11 +14,11 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Date;
 
 @RestController
+@AllArgsConstructor
 @RequestMapping("/api/ordered-plan")
 public class OrderedPlanRestController {
 
-    @Autowired
-    private OrderedPlanService orderedPlanService;
+    private final OrderedPlanService orderedPlanService;
 
     @GetMapping("/{id}")
     public ResponseEntity<BaseResponseDTO<OrderedPlanDetailResponseDTO>> getOrderedPlanDetail(

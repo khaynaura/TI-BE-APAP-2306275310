@@ -10,7 +10,7 @@ import apap.ti._5.Insurance_2306275310_be.restdto.request.policy.CreatePolicyReq
 import apap.ti._5.Insurance_2306275310_be.restdto.response.orderedplan.OrderedPlanSummaryResponseDTO;
 import apap.ti._5.Insurance_2306275310_be.restdto.response.policy.PolicyResponseDTO;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.AllArgsConstructor; 
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -21,16 +21,14 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
+@AllArgsConstructor
 public class PolicyServiceImpl implements PolicyService {
 
-    @Autowired
-    private PolicyRepository policyRepository;
+    private final PolicyRepository policyRepository;
 
-    @Autowired
-    private InsurancePlanRepository insurancePlanRepository;
+    private final InsurancePlanRepository insurancePlanRepository;
 
-    @Autowired
-    private OrderedPlanRepository orderedPlanRepository;
+    private final OrderedPlanRepository orderedPlanRepository;
 
     @Override
     public PolicyResponseDTO createPolicy(CreatePolicyRequestDTO createDTO) {

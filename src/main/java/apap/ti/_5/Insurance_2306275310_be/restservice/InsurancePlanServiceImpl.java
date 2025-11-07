@@ -7,19 +7,20 @@ import apap.ti._5.Insurance_2306275310_be.restdto.request.insuranceplan.CreateIn
 import apap.ti._5.Insurance_2306275310_be.restdto.request.insuranceplan.UpdateInsurancePlanRequestDTO;
 import apap.ti._5.Insurance_2306275310_be.restdto.response.insuranceplan.InsurancePlanResponseDTO;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.AllArgsConstructor; 
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @Transactional
+@AllArgsConstructor
 public class InsurancePlanServiceImpl implements InsurancePlanService {
 
-    @Autowired
-    private InsurancePlanRepository insurancePlanRepository;
+    private final InsurancePlanRepository insurancePlanRepository;
 
     @Override
     public InsurancePlanResponseDTO createInsurancePlan(CreateInsurancePlanRequestDTO createDTO) {
@@ -71,21 +72,20 @@ public class InsurancePlanServiceImpl implements InsurancePlanService {
     @Override
     public InsurancePlanResponseDTO updateInsurancePlan(UpdateInsurancePlanRequestDTO updateDTO) {
         InsurancePlan plan = insurancePlanRepository.findByIdAndDeletedAtIsNull(updateDTO.getId())
-                .orElse(null); 
+                .orElse(null);
 
         if (plan == null) {
             return null;
         }
 
-        plan = plan.toBuilder() 
-                .planName(updateDTO.getPlanName())
-                .price(updateDTO.getPrice())
-                .coverage(updateDTO.getCoverage())
-                .coverageDetails(updateDTO.getCoverageDetails())
-                .applicableService(updateDTO.getApplicableService())
-                .expiredByDays(updateDTO.getExpiredByDays())
-                .build();
-        
+        plan.setPlanName(updateDTO.getPlanName());
+        plan.setPrice(updateDTO.getPrice());
+        plan.setCoverage(updateDTO.getCoverage());
+        plan.setCoverageDetails(updateDTO.getCoverageDetails());
+        plan.setApplicableService(updateDTO.getApplicableService());
+        plan.setExpiredByDays(updateDTO.getExpiredByDays());
+        // plan.setUpdatedAt(LocalDateTime.now());
+
         InsurancePlan updatedPlan = insurancePlanRepository.save(plan);
         return convertToResponseDTO(updatedPlan);
     }

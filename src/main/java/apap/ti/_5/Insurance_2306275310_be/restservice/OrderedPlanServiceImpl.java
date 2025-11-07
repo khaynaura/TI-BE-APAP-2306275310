@@ -6,8 +6,9 @@ import apap.ti._5.Insurance_2306275310_be.repository.OrderedPlanRepository;
 import apap.ti._5.Insurance_2306275310_be.restdto.response.claim.ClaimSummaryResponseDTO;
 import apap.ti._5.Insurance_2306275310_be.restdto.response.orderedplan.OrderedPlanDetailResponseDTO;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.AllArgsConstructor; 
 import org.springframework.stereotype.Service;
+
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -16,10 +17,10 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
+@AllArgsConstructor
 public class OrderedPlanServiceImpl implements OrderedPlanService {
 
-    @Autowired
-    private OrderedPlanRepository orderedPlanRepository;
+    private final OrderedPlanRepository orderedPlanRepository;
 
     @Override
     public OrderedPlanDetailResponseDTO getOrderedPlanDetailById(String orderedPlanId) {
