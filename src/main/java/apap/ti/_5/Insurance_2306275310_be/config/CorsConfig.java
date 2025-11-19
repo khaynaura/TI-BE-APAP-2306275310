@@ -8,11 +8,10 @@ import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 public class CorsConfig {
-
+// huft
     @Value("${CORS_ALLOWED_ORIGINS}")
     private String allowedOrigins;
 
-    // test
     @Bean
     public WebMvcConfigurer corsConfigurer() {
         return new WebMvcConfigurer() {
