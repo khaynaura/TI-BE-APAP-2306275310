@@ -9,6 +9,7 @@ variables:
   IMAGE_TAG: $CI_COMMIT_SHORT_SHA # Menggunakan 8 karakter pertama dari commit hash
 
 # --- STAGE 1: BUILD ---
+
 build:
   stage: build
   image: eclipse-temurin:21-jdk
