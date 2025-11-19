@@ -36,7 +36,7 @@ public class Insurance2306275310BeApplication {
     }
 
     @Bean
-    @Profile("!test")
+    // @Profile("!test")
     public CommandLineRunner createDummyData(
             InsurancePlanService insurancePlanService,
             PolicyService policyService,
