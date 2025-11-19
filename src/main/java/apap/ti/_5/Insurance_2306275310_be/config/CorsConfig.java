@@ -8,19 +8,20 @@ import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 public class CorsConfig {
-// huft
-    @Value("${CORS_ALLOWED_ORIGINS}")
-    private String allowedOrigins;
+
+    // KARENA GAGAL FETCH, KITA AKAN ABAIKAN CORS_ALLOWED_ORIGINS DARI SECRET SEMENTARA
+    // DAN MENGGUNAKAN WILDCARD (*) UNTUK MENGUJI KONEKSI INTERNAL.
 
     @Bean
     public WebMvcConfigurer corsConfigurer() {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
-                String[] origins = allowedOrigins.split(",");
-
+                
+                // MENGGUNAKAN WILDCARD UNTUK MENGIZINKAN SEMUA ORIGIN.
+                // JIKA INI BERHASIL, MASALAHNYA ADA PADA NILAI GITHUB SECRET CORS_ALLOWED_ORIGINS.
                 registry.addMapping("/**")
-                        .allowedOrigins(origins)
+                        .allowedOrigins("*") // Mengizinkan semua origin untuk debug
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true)
