@@ -10,6 +10,7 @@ variables:
 
 # --- STAGE 1: BUILD ---
 
+
 build:
   stage: build
   image: eclipse-temurin:21-jdk
