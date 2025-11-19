@@ -11,22 +11,19 @@ public class CorsConfig {
 
     // KARENA GAGAL FETCH, KITA AKAN ABAIKAN CORS_ALLOWED_ORIGINS DARI SECRET SEMENTARA
     // DAN MENGGUNAKAN WILDCARD (*) UNTUK MENGUJI KONEKSI INTERNAL.
-
     @Bean
     public WebMvcConfigurer corsConfigurer() {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
-                
-                // MENGGUNAKAN WILDCARD UNTUK MENGIZINKAN SEMUA ORIGIN.
-                // JIKA INI BERHASIL, MASALAHNYA ADA PADA NILAI GITHUB SECRET CORS_ALLOWED_ORIGINS.
                 registry.addMapping("/**")
-                        .allowedOrigins("*") // Mengizinkan semua origin untuk debug
+                        .allowedOriginPatterns("*")  // <--- PENTING: Ganti allowedOrigins jadi allowedOriginPatterns
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
-                        .allowCredentials(true)
+                        .allowCredentials(true)      // Ini baru boleh true kalau pakai allowedOriginPatterns
                         .exposedHeaders("Authorization");
             }
         };
+    
     }
 }
