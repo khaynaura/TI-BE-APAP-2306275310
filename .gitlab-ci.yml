@@ -11,7 +11,7 @@ variables:
 # --- STAGE 1: BUILD ---
 build:
   stage: build
-  image: eclipse-temurin:21-jdk
+  image: gradle:8.4.3-jdk21
   script:
     - chmod +x ./gradlew
     - ./gradlew clean build -x test
