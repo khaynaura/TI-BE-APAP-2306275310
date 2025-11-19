@@ -21,8 +21,8 @@ build:
     paths:
       - app.jar
       - Dockerfile
-      # Kita tidak perlu deployment.yaml dan service.yaml di sini 
-      # karena akan dibuat on-the-fly di stage 'deploy' (metode printf)
+      - k8s/deployment.yaml
+      - k8s/service.yaml
     expire_in: 1 hour
 
 # --- STAGE 2: DOCKER PUSH ---
