@@ -1,0 +1,16 @@
+services:
+  insurance-db:
+    image: postgres:17.5-alpine
+    ports:
+      - '35002:5432'
+    restart: 'always'
+    environment:
+      - POSTGRES_USER=travelapap
+      - POSTGRES_PASSWORD=2306275310
+      - POSTGRES_DB=Insurance-2306275310
+    volumes:
+      - insurance-db:/var/lib/postgresql/data
+
+volumes:
+  insurance-db:
+    driver: local

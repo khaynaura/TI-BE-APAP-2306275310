@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: insurance-2306275310-deployment
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: insurance-2306275310-be
+  template:
+    metadata:
+      labels:
+        app: insurance-2306275310-be
+    spec:
+      containers:
+        - name: springboot-container
+          # PASTIKAN INI DIGANTI DENGAN IMAGE DOCKER HUB KAMU
+          image: khaylanaura/insurance-be:REPLACE_ME_TAG 
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DATABASE_URL_PROD
+              valueFrom:
+                configMapKeyRef:
+                  name: insurance-2306275310-config
+                  key: DATABASE_URL_PROD
+            - name: DATABASE_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: insurance-2306275310-config
+                  key: DATABASE_USERNAME
+            # --- KONFIGURASI RAHASIA (DIAMBIL DARI SECRET) ---
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: insurance-2306275310-secret
+                  key: DATABASE_PASSWORD
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: insurance-2306275310-secret
+                  key: JWT_SECRET_KEY
+            - name: CORS_ALLOWED_ORIGINS
+              valueFrom:
+                secretKeyRef:
+                  name: insurance-2306275310-secret
+                  key: CORS_ALLOWED_ORIGINS
