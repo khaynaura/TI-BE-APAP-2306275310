@@ -21,7 +21,7 @@ Masukan bukti screenshot bahwa kalian sudah berhasil melakukan deploy Sidating B
 
 **2. Bukti Deployment Sidating BE 2**
 ![Test Login BE-2](./src/assets/Login-BE2.png)
-![Test Get Profile BE-1](./src/assets/Profile-BE1.png)
+![Test Get Profile BE-1](./src/assets/Profile-BE2.png)
 
 **3. Bukti Deployment Sidating FE**
 ![Test FE](./src/assets/FE.png)
