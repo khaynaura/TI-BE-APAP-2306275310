@@ -34,19 +34,23 @@ public class ClaimServiceImpl implements ClaimService {
 
     @Override
     public List<ClaimSummaryResponseDTO> getAllClaimsFiltered(String status, String insurancePlanId) {
-
         List<Claim> claims;
+        
+        // Cek apakah ada filter
         boolean filterByStatus = status != null && !status.isBlank() && !status.equalsIgnoreCase("All Statuses");
         boolean filterByPlan = insurancePlanId != null && !insurancePlanId.isBlank() && !insurancePlanId.equalsIgnoreCase("All Insurance Plans");
 
         if (filterByStatus && filterByPlan) {
-            claims = claimRepository.findAllByStatusAndOrderedPlan_InsurancePlan_Id(status, insurancePlanId);
+            claims = claimRepository.findAllByStatusAndOrderedPlan_InsurancePlan_IdOrderByCreatedAtDesc(status, insurancePlanId);
+        
         } else if (filterByStatus) {
-            claims = claimRepository.findAllByStatus(status);
+            claims = claimRepository.findAllByStatusOrderByCreatedAtDesc(status);
+        
         } else if (filterByPlan) {
-            claims = claimRepository.findAllByOrderedPlan_InsurancePlan_Id(insurancePlanId);
+            claims = claimRepository.findAllByOrderedPlan_InsurancePlan_IdOrderByCreatedAtDesc(insurancePlanId);
+        
         } else {
-            claims = claimRepository.findAll();
+            claims = claimRepository.findAllByOrderByCreatedAtDesc();
         }
 
         return claims.stream()

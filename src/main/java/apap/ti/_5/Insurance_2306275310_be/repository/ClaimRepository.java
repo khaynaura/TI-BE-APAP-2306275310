@@ -9,12 +9,15 @@ import java.util.List;
 @Repository
 public interface ClaimRepository extends JpaRepository<Claim, String> {
 
-    // filter by status
-    List<Claim> findAllByStatus(String status);
+    // 1. Ambil semua, urutkan dari yang terbaru
+    List<Claim> findAllByOrderByCreatedAtDesc();
 
-    // filter by Insurance Plan ID (from OrderedPlan)
-    List<Claim> findAllByOrderedPlan_InsurancePlan_Id(String insurancePlanId);
+    // 2. Filter by status, urutkan dari yang terbaru
+    List<Claim> findAllByStatusOrderByCreatedAtDesc(String status);
 
-    // filter by Status and Insurance Plan ID
-    List<Claim> findAllByStatusAndOrderedPlan_InsurancePlan_Id(String status, String insurancePlanId);
+    // 3. Filter by Insurance Plan ID, urutkan dari yang terbaru
+    List<Claim> findAllByOrderedPlan_InsurancePlan_IdOrderByCreatedAtDesc(String insurancePlanId);
+
+    // 4. Filter by Status AND Insurance Plan ID, urutkan dari yang terbaru
+    List<Claim> findAllByStatusAndOrderedPlan_InsurancePlan_IdOrderByCreatedAtDesc(String status, String insurancePlanId);
 }
