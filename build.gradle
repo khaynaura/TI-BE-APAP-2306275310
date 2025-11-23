@@ -65,3 +65,7 @@ jacocoTestReport {
 		html.outputLocation = layout.buildDirectory.dir('jacocoHtml')
 	}
 }
+
+tasks.named('jar') {
+    enabled = false
+}
