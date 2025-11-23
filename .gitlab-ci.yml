@@ -64,7 +64,7 @@ deploy:
     - echo "Generating Kubernetes ConfigMap & Secret via printf..."
     # ConfigMap untuk INSURANCE
     - |
-      printf "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: insurance-2306275310-config\n  namespace: default\ndata:\n  DATABASE_URL_PROD: \"%s\"\n  DATABASE_USERNAME: \"%s\"\n" \
+      printf "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: insurance-2306275310-config\n  namespace: default\ndata:\n  DATABASE_URL_PROD1: \"%s\"\n  DATABASE_USERNAME: \"%s\"\n" \
       "$DATABASE_URL_PROD_1" "$DATABASE_USERNAME" > configmap.yaml
     # Secret untuk INSURANCE
     - |
