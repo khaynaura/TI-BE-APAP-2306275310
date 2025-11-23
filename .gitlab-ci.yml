@@ -4,7 +4,6 @@ stages:
   - deploy
 
 variables:
-  # Nama image Docker Hub (misal: khaylanaura/insurance-2306275310-be)
   DOCKER_IMAGE_NAME: ${DOCKER_IMAGE_NAME} 
   IMAGE_TAG: $CI_COMMIT_SHORT_SHA # Menggunakan 8 karakter pertama dari commit hash
 
