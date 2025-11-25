@@ -7,5 +7,5 @@ public interface StatisticsService {
 
     HomeSummaryResponseDTO getHomeSummary();
 
-    ChartDataResponseDTO getChartStatistics(int timePeriod, String service);
+    ChartDataResponseDTO getChartStatistics(int timePeriod, String service, String providerId);
 }

@@ -8,6 +8,8 @@ import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -31,7 +33,22 @@ public class StatisticsRestController {
     ) {
         var response = new BaseResponseDTO<ChartDataResponseDTO>();
         try {
-            ChartDataResponseDTO data = statisticsService.getChartStatistics(timePeriod, service);
+            // --- LOGIKA BARU: CEK ROLE ---
+            String providerId = null;
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            
+            // Cek apakah user yang login adalah INSURANCE_PROVIDER
+            boolean isProvider = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_INSURANCE_PROVIDER"));
+            
+            if (isProvider) {
+                // Jika Provider, ambil ID-nya biar data difilter
+                providerId = (String) auth.getPrincipal();
+            }
+            // Jika Superadmin, providerId tetap null (artinya ambil semua data)
+
+            // Panggil service dengan parameter tambahan providerId
+            ChartDataResponseDTO data = statisticsService.getChartStatistics(timePeriod, service, providerId);
             
             response.setStatus(HttpStatus.OK.value());
             response.setMessage("Chart data retrieved successfully.");
@@ -47,7 +64,7 @@ public class StatisticsRestController {
         }
     }
     
-    // Summary Homepage (Biasanya untuk semua user terdaftar atau Admin/Provider)
+    // Summary Homepage (Gak perlu diubah, ini global summary)
     @GetMapping("/summary")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BaseResponseDTO<HomeSummaryResponseDTO>> getHomeSummary() {

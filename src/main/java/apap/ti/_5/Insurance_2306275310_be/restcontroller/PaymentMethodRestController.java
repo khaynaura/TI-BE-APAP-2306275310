@@ -7,6 +7,7 @@ import apap.ti._5.Insurance_2306275310_be.restservice.PaymentMethodService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,21 +20,21 @@ public class PaymentMethodRestController {
     @Autowired
     private PaymentMethodService paymentMethodService;
 
-    // [PBI-BE-TU6] GET All Payment Methods
     @GetMapping("/all")
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<List<PaymentMethod>> getAllPaymentMethods() {
         return ResponseEntity.ok(paymentMethodService.getAllPaymentMethods());
     }
 
-    // [PBI-BE-TU7] POST Create Payment Method
     @PostMapping("/create")
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<PaymentMethod> addPaymentMethod(@RequestBody AddPaymentMethodRequestDTO request) {
         var newMethod = paymentMethodService.addPaymentMethod(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(newMethod);
     }
 
-    // [PBI-BE-TU8] PUT Update Payment Method Status
     @PutMapping("/{id}/status")
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<PaymentMethod> updateStatus(
             @PathVariable("id") UUID id,
             @RequestBody UpdatePaymentMethodStatusRequestDTO request) {
@@ -41,8 +42,8 @@ public class PaymentMethodRestController {
         return ResponseEntity.ok(updatedMethod);
     }
 
-    // [PBI-BE-TU9] DELETE Payment Method
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<String> deletePaymentMethod(@PathVariable("id") UUID id) {
         paymentMethodService.deletePaymentMethod(id);
         return ResponseEntity.ok("Payment method has been deleted successfully");

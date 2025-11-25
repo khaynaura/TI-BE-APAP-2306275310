@@ -73,6 +73,28 @@ public class SecurityConfig {
                 // I15: View Stats (Hanya Admin & Provider)
                 .requestMatchers(HttpMethod.GET, "/api/statistics/**").hasAnyRole("SUPERADMIN", "INSURANCE_PROVIDER")
 
+                                // --- PAYMENT METHOD (PBI-BE-TU6 s/d TU9) ---
+                // Semua fitur Payment Method HANYA untuk Superadmin
+                .requestMatchers("/api/payment-method/**").hasRole("SUPERADMIN")
+
+                // --- TOP UP TRANSACTION ---
+                // PBI-BE-TU1: Get All (Superadmin)
+                .requestMatchers(HttpMethod.GET, "/api/top-up/all").hasRole("SUPERADMIN")
+                
+                // PBI-BE-TU1: Get History (Customer) - Validasi ID dilakukan di Controller
+                .requestMatchers(HttpMethod.GET, "/api/top-up/history/**").hasAnyRole("CUSTOMER", "SUPERADMIN")
+
+                // PBI-BE-TU2 & TU5: Get Detail & Delete (Superadmin)
+                .requestMatchers(HttpMethod.GET, "/api/top-up/{id}").hasRole("SUPERADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/top-up/{id}").hasRole("SUPERADMIN")
+
+                // PBI-BE-TU3: Create Top Up (Customer)
+                .requestMatchers(HttpMethod.POST, "/api/top-up/create").hasRole("CUSTOMER")
+
+                // PBI-BE-TU4: Update Status (Superadmin)
+                .requestMatchers(HttpMethod.PUT, "/api/top-up/{id}/status").hasRole("SUPERADMIN")
+
+
                 // SISANYA WAJIB LOGIN
                 .anyRequest().authenticated()
             );

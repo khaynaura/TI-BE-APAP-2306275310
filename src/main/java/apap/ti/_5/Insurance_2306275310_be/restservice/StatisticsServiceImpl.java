@@ -8,6 +8,8 @@ import apap.ti._5.Insurance_2306275310_be.repository.PolicyRepository;
 import apap.ti._5.Insurance_2306275310_be.restdto.response.statistics.ChartDataResponseDTO;
 import apap.ti._5.Insurance_2306275310_be.restdto.response.statistics.HomeSummaryResponseDTO;
 import jakarta.transaction.Transactional;
+import lombok.AllArgsConstructor; 
+import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -18,25 +20,19 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import lombok.AllArgsConstructor; 
-import org.springframework.stereotype.Service;
-
 @Service
 @Transactional
 @AllArgsConstructor
 public class StatisticsServiceImpl implements StatisticsService {
 
     private final InsurancePlanRepository insurancePlanRepository;
-
     private final PolicyRepository policyRepository;
-
     private final ClaimRepository claimRepository;
-
     private final OrderedPlanRepository orderedPlanRepository;
 
     @Override
     public HomeSummaryResponseDTO getHomeSummary() {
-
+        // Summary global (bisa difilter juga kalau mau, tapi soal minta statistik chart yg difilter)
         long totalPlans = insurancePlanRepository.countByDeletedAtIsNull();
         long totalPolicies = policyRepository.count();
         long totalClaims = claimRepository.count();
@@ -49,26 +45,24 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     @Override
-    public ChartDataResponseDTO getChartStatistics(int timePeriod, String service) {
+    public ChartDataResponseDTO getChartStatistics(int timePeriod, String service, String providerId) {
 
+        // 1. Tentukan Tanggal Mulai (H-Bulan)
         LocalDateTime startDate = LocalDateTime.now().minusMonths(timePeriod - 1)
                                       .withDayOfMonth(1).toLocalDate().atStartOfDay();
         
-        List<MonthlyOrderCount> results;
-        boolean filterByService = service != null && !service.isBlank() && !service.equalsIgnoreCase("All Services");
+        // 2. Normalisasi Filter Service ("All Services" -> null)
+        String serviceFilter = (service != null && !service.isBlank() && !service.equalsIgnoreCase("All Services")) 
+                                ? service : null;
         
-        if (filterByService) {
-            results = orderedPlanRepository.findMonthlyOrderCountsByService(startDate, service);
-        } else {
-            results = orderedPlanRepository.findMonthlyOrderCounts(startDate);
-        }
+        // 3. Panggil Repository Baru (yang support filter Provider)
+        List<MonthlyOrderCount> results = orderedPlanRepository.findMonthlyStats(startDate, serviceFilter, providerId);
    
+        // 4. Convert ke DTO
         return convertToChartDTO(results, timePeriod);
     }
 
-
     private ChartDataResponseDTO convertToChartDTO(List<MonthlyOrderCount> results, int timePeriod) {
-  
         Map<Integer, Long> resultMap = results.stream()
                 .collect(Collectors.toMap(
                     MonthlyOrderCount::getMonth,
@@ -80,6 +74,7 @@ public class StatisticsServiceImpl implements StatisticsService {
         
         LocalDate currentDate = LocalDate.now();
 
+        // Loop mundur dari bulan ini ke belakang
         for (int i = timePeriod - 1; i >= 0; i--) {
             LocalDate monthDate = currentDate.minusMonths(i);
             int monthValue = monthDate.getMonthValue();
@@ -94,5 +89,4 @@ public class StatisticsServiceImpl implements StatisticsService {
                 .data(data)
                 .build();
     }
-
 }
