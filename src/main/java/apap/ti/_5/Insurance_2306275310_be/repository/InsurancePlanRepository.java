@@ -29,4 +29,7 @@ public interface InsurancePlanRepository extends JpaRepository<InsurancePlan, St
     long countAll();
 
     long countByDeletedAtIsNull();
+
+    List<InsurancePlan> findAllByProviderIdAndDeletedAtIsNull(String providerId);
+
 }

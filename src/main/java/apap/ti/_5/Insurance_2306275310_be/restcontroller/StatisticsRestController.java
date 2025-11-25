@@ -4,9 +4,10 @@ import apap.ti._5.Insurance_2306275310_be.restdto.BaseResponseDTO;
 import apap.ti._5.Insurance_2306275310_be.restdto.response.statistics.ChartDataResponseDTO;
 import apap.ti._5.Insurance_2306275310_be.restdto.response.statistics.HomeSummaryResponseDTO;
 import apap.ti._5.Insurance_2306275310_be.restservice.StatisticsService;
-import lombok.AllArgsConstructor; 
+import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -21,30 +22,9 @@ public class StatisticsRestController {
 
     private final StatisticsService statisticsService;
 
-    public static final String SUMMARY_URL = "/summary";
-    public static final String CHART_URL = "/chart";
-
-    @GetMapping(SUMMARY_URL)
-    public ResponseEntity<BaseResponseDTO<HomeSummaryResponseDTO>> getHomeSummary() {
-        var baseResponseDTO = new BaseResponseDTO<HomeSummaryResponseDTO>();
-        try {
-            HomeSummaryResponseDTO summaryDTO = statisticsService.getHomeSummary();
-
-            baseResponseDTO.setStatus(HttpStatus.OK.value());
-            baseResponseDTO.setData(summaryDTO);
-            baseResponseDTO.setMessage("Ringkasan data berhasil diambil");
-            baseResponseDTO.setTimestamp(new Date());
-            return new ResponseEntity<>(baseResponseDTO, HttpStatus.OK);
-
-        } catch (Exception ex) {
-            baseResponseDTO.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
-            baseResponseDTO.setMessage("Terjadi kesalahan pada server: " + ex.getMessage());
-            baseResponseDTO.setTimestamp(new Date());
-            return new ResponseEntity<>(baseResponseDTO, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    @GetMapping(CHART_URL)
+    // PBI-BE-I15: GET Insurance Statistics (Admin & Provider)
+    @GetMapping("/chart")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'INSURANCE_PROVIDER')")
     public ResponseEntity<BaseResponseDTO<ChartDataResponseDTO>> getChartStatistics(
             @RequestParam("period") int timePeriod, 
             @RequestParam("service") String service 
@@ -67,4 +47,25 @@ public class StatisticsRestController {
         }
     }
     
+    // Summary Homepage (Biasanya untuk semua user terdaftar atau Admin/Provider)
+    @GetMapping("/summary")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<BaseResponseDTO<HomeSummaryResponseDTO>> getHomeSummary() {
+        var baseResponseDTO = new BaseResponseDTO<HomeSummaryResponseDTO>();
+        try {
+            HomeSummaryResponseDTO summaryDTO = statisticsService.getHomeSummary();
+
+            baseResponseDTO.setStatus(HttpStatus.OK.value());
+            baseResponseDTO.setData(summaryDTO);
+            baseResponseDTO.setMessage("Ringkasan data berhasil diambil");
+            baseResponseDTO.setTimestamp(new Date());
+            return new ResponseEntity<>(baseResponseDTO, HttpStatus.OK);
+
+        } catch (Exception ex) {
+            baseResponseDTO.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+            baseResponseDTO.setMessage("Terjadi kesalahan pada server: " + ex.getMessage());
+            baseResponseDTO.setTimestamp(new Date());
+            return new ResponseEntity<>(baseResponseDTO, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }

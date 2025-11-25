@@ -205,4 +205,20 @@ public class ClaimServiceImpl implements ClaimService {
                 .acceptedTimestamp(claim.getAcceptedTimestamp())
                 .build();
     }
+
+    @Override
+    public boolean isClaimOwner(String claimId, String userId) {
+        // 1. Cari Claim berdasarkan claimId
+        Claim claim = claimRepository.findById(claimId).orElse(null); 
+        
+        // Jika claim tidak ada, otomatis bukan pemilik (return false)
+        if (claim == null) {
+            return false;
+        }
+    
+        // 2. Cek alur relasi: Claim -> OrderedPlan -> Policy -> User ID
+        // Kita bandingkan User ID di Policy dengan userId yang sedang login
+        return claim.getOrderedPlan().getPolicy().getUserId().equals(userId);
+    }
+    
 }

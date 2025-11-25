@@ -3,9 +3,10 @@ package apap.ti._5.Insurance_2306275310_be.restcontroller;
 import apap.ti._5.Insurance_2306275310_be.restdto.BaseResponseDTO;
 import apap.ti._5.Insurance_2306275310_be.restdto.response.orderedplan.OrderedPlanDetailResponseDTO;
 import apap.ti._5.Insurance_2306275310_be.restservice.OrderedPlanService;
-import lombok.AllArgsConstructor; 
+import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,7 +21,9 @@ public class OrderedPlanRestController {
 
     private final OrderedPlanService orderedPlanService;
 
+    // PBI-BE-I12 (atau I13 di backlog baru): GET Detail Ordered Plan
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'SUPERADMIN')")
     public ResponseEntity<BaseResponseDTO<OrderedPlanDetailResponseDTO>> getOrderedPlanDetail(
             @PathVariable("id") String id
     ) {

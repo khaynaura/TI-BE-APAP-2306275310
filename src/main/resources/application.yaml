@@ -13,3 +13,26 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
+
+profile:
+  service:
+    url: http://localhost:8082
+
+
+# Billing Service (Pembayaran)
+billing:
+  service:
+    url: http://localhost:8085      # Sesuaikan port teman kelompok bagian Billing
+
+# Booking Services (Untuk Validasi PBI-BE-I9)
+flight:
+  service:
+    url: http://localhost:8086      # Sesuaikan port teman kelompok bagian Flight
+
+rental:
+  service:
+    url: http://localhost:8088      # Sesuaikan port teman kelompok bagian Rental
+
+package:
+  service:
+    url: http://localhost:8089      # Sesuaikan port teman kelompok bagian Package

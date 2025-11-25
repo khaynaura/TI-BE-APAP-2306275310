@@ -35,8 +35,8 @@ public class Insurance2306275310BeApplication {
         SpringApplication.run(Insurance2306275310BeApplication.class, args);
     }
 
-    @Bean
-    // @Profile("!test")
+    // @Bean
+    // // @Profile("!test")
     public CommandLineRunner createDummyData(
             InsurancePlanService insurancePlanService,
             PolicyService policyService,

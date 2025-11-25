@@ -3,6 +3,7 @@ package apap.ti._5.Insurance_2306275310_be.restservice;
 import apap.ti._5.Insurance_2306275310_be.model.InsurancePlan;
 import apap.ti._5.Insurance_2306275310_be.model.OrderedPlan;
 import apap.ti._5.Insurance_2306275310_be.model.Policy;
+import apap.ti._5.Insurance_2306275310_be.model.ServiceEnum;
 import apap.ti._5.Insurance_2306275310_be.repository.InsurancePlanRepository;
 import apap.ti._5.Insurance_2306275310_be.repository.OrderedPlanRepository;
 import apap.ti._5.Insurance_2306275310_be.repository.PolicyRepository;
@@ -10,57 +11,99 @@ import apap.ti._5.Insurance_2306275310_be.restdto.request.policy.CreatePolicyReq
 import apap.ti._5.Insurance_2306275310_be.restdto.response.orderedplan.OrderedPlanSummaryResponseDTO;
 import apap.ti._5.Insurance_2306275310_be.restdto.response.policy.PolicyResponseDTO;
 import jakarta.transaction.Transactional;
-import lombok.AllArgsConstructor; 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 @Transactional
-@AllArgsConstructor
 public class PolicyServiceImpl implements PolicyService {
 
     private final PolicyRepository policyRepository;
-
     private final InsurancePlanRepository insurancePlanRepository;
-
     private final OrderedPlanRepository orderedPlanRepository;
+    private final WebClient webClient;
+
+    // URL Service Teman (Pastikan port di application.yml benar!)
+    @Value("${billing.service.url}")
+    private String billingServiceUrl;
+
+    @Value("${flight.service.url}")
+    private String flightServiceUrl;
+
+    // Menggunakan default value biar gak error kalau yml belum ada
+    @Value("${profile.service.url}") 
+    private String accommodationServiceUrl;
+
+    @Value("${rental.service.url}")
+    private String rentalServiceUrl;
+
+    @Value("${package.service.url}")
+    private String packageServiceUrl;
+
+    public PolicyServiceImpl(PolicyRepository policyRepository,
+                             InsurancePlanRepository insurancePlanRepository,
+                             OrderedPlanRepository orderedPlanRepository,
+                             WebClient.Builder webClientBuilder) {
+        this.policyRepository = policyRepository;
+        this.insurancePlanRepository = insurancePlanRepository;
+        this.orderedPlanRepository = orderedPlanRepository;
+        this.webClient = webClientBuilder.build();
+    }
 
     @Override
     public PolicyResponseDTO createPolicy(CreatePolicyRequestDTO createDTO) {
 
+        // 1. VALIDASI BOOKING ID KE SERVICE LAIN (PENTING)
+        // Ini akan nembak API teman kamu. Kalau ID gak ada -> Error.
+        validateBookingId(createDTO.getService(), createDTO.getBookingId());
+
+        // 2. Validasi & Ambil Insurance Plans
         List<InsurancePlan> plans = insurancePlanRepository.findAllById(createDTO.getInsurancePlanIds());
         
-
         if (plans.size() != createDTO.getInsurancePlanIds().size()) {
-            throw new RuntimeException("One or more Insurance Plan IDs are invalid.");
+            throw new IllegalArgumentException("Salah satu Insurance Plan ID tidak valid.");
+        }
+
+        for (InsurancePlan plan : plans) {
+            if (!plan.getApplicableService().contains(createDTO.getService())) {
+                throw new IllegalArgumentException("Plan '" + plan.getPlanName() + "' tidak cocok untuk layanan " + createDTO.getService());
+            }
         }
 
         int totalPrice = plans.stream().mapToInt(InsurancePlan::getPrice).sum();
         int totalCoverage = plans.stream().mapToInt(InsurancePlan::getCoverage).sum();
 
-
+        // 3. Buat Object Policy
         Policy policy = new Policy();
-
-        policy.setId("POL" + (policyRepository.count() + 1));
+        policy.setId("POL" + (policyRepository.count() + 1)); // ID: POL1, POL2...
         policy.setUserId(createDTO.getUserId());
         policy.setBookingId(createDTO.getBookingId());
         policy.setService(createDTO.getService());
-        policy.setStartDate(LocalDate.now()); 
-        policy.setStatus("CREATED"); 
+        policy.setStartDate(LocalDate.now());
+        policy.setStatus("CREATED"); // Awalnya CREATED
         policy.setTotalPrice(totalPrice);
         policy.setTotalCoverage(totalCoverage);
 
+        // 4. Buat Object OrderedPlan
         List<OrderedPlan> orderedPlans = new ArrayList<>();
         int i = 1;
         for (InsurancePlan plan : plans) {
             OrderedPlan op = new OrderedPlan();
             op.setId(policy.getId() + "-OP" + i);
-            op.setStatus("ORDERED"); 
+            op.setStatus("CREATED");
             op.setExpiredDate(policy.getStartDate().plusDays(plan.getExpiredByDays()));
             op.setInsurancePlan(plan);
             op.setPolicy(policy);
@@ -68,44 +111,128 @@ public class PolicyServiceImpl implements PolicyService {
             i++;
         }
 
-        policy.setOrderedPlans(new ArrayList<>()); 
+        // Simpan ke DB
+        policy.setOrderedPlans(new ArrayList<>());
         Policy savedPolicy = policyRepository.save(policy);
 
         List<OrderedPlan> savedOrderedPlans = orderedPlanRepository.saveAll(orderedPlans);
         savedPolicy.setOrderedPlans(savedOrderedPlans);
 
+        // 5. INTEGRASI BILLING (Create Tagihan)
+        createBill(savedPolicy);
+
         return convertToResponseDTO(savedPolicy);
     }
 
+    // === METHOD VALIDASI BOOKING (KUNCI SUKSES) ===
+    private void validateBookingId(ServiceEnum service, String bookingId) {
+        String targetUrl = "";
+
+        // Tentukan URL berdasarkan Service
+        switch (service.name()) {
+            case "FLIGHT": case "Flight":
+                targetUrl = flightServiceUrl + "/api/flight-booking/" + bookingId;
+                break;
+            case "ACCOMMODATION": case "Accommodation":
+                // Endpoint sesuai Accommodation Controller temanmu
+                targetUrl = accommodationServiceUrl + "/api/bookings/" + bookingId; 
+                break;
+            case "RENTAL": case "Rentals":
+                targetUrl = rentalServiceUrl + "/api/rental-booking/" + bookingId;
+                break;
+            case "PACKAGE": case "Tour Package":
+                targetUrl = packageServiceUrl + "/api/package-booking/" + bookingId;
+                break;
+            default:
+                return; // Skip validasi kalau service lain
+        }
+
+        try {
+            // AMBIL TOKEN DARI REQUEST USER & KIRIM KE SERVICE TEMAN
+            String token = getTokenFromRequest();
+
+            webClient.get()
+                    .uri(targetUrl)
+                    .header(HttpHeaders.AUTHORIZATION, token) // <--- INI YANG BIKIN WORKS
+                    .retrieve()
+                    .toBodilessEntity()
+                    .block();
+                    
+        } catch (WebClientResponseException e) {
+            if (e.getStatusCode().value() == 404) {
+                throw new IllegalArgumentException("Booking ID " + bookingId + " tidak ditemukan di sistem " + service);
+            }
+            // Abaikan error lain (misal service mati), anggap valid biar gak blocking
+            System.err.println("WARNING: Gagal validasi ke " + service + " (" + e.getStatusCode() + ")");
+        } catch (Exception e) {
+             System.err.println("WARNING: Service " + service + " tidak merespons. Validasi di-skip.");
+        }
+    }
+
+    // === METHOD CREATE BILL ===
+    private void createBill(Policy policy) {
+        try {
+            Map<String, Object> billPayload = new HashMap<>();
+            billPayload.put("policyId", policy.getId());
+            billPayload.put("bookingId", policy.getBookingId());
+            billPayload.put("amount", policy.getTotalPrice());
+            billPayload.put("description", "Asuransi " + policy.getService());
+            
+            String token = getTokenFromRequest();
+
+            webClient.post()
+                    .uri(billingServiceUrl + "/api/bill/create")
+                    .header(HttpHeaders.AUTHORIZATION, token) // Kirim token juga
+                    .bodyValue(billPayload)
+                    .retrieve()
+                    .bodyToMono(Object.class)
+                    .block();
+
+        } catch (Exception e) {
+            // Cuma log error, jangan bikin policy gagal
+            System.err.println("INFO: Gagal membuat Bill (Mungkin Service Billing mati/belum siap).");
+        }
+    }
+
+    // Helper Ambil Token
+    private String getTokenFromRequest() {
+        ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attrs != null) {
+            return attrs.getRequest().getHeader(HttpHeaders.AUTHORIZATION);
+        }
+        return null;
+    }
+
+    // --- SISA METHOD CRUD ---
     @Override
     public List<PolicyResponseDTO> getAllPolicies() {
         List<Policy> allPolicies = policyRepository.findAll();
-        
-       
         allPolicies.forEach(this::checkAndSetExpiration);
-        
-        return allPolicies.stream()
-                .map(this::convertToResponseDTO)
-                .collect(Collectors.toList());
+        return allPolicies.stream().map(this::convertToResponseDTO).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<PolicyResponseDTO> getPoliciesByUserId(String userId) {
+        List<Policy> userPolicies = policyRepository.findAllByUserId(userId);
+        userPolicies.forEach(this::checkAndSetExpiration);
+        return userPolicies.stream().map(this::convertToResponseDTO).collect(Collectors.toList());
     }
 
     @Override
     public PolicyResponseDTO getPolicyById(String policyId) {
         Policy policy = policyRepository.findById(policyId)
-                .orElseThrow(() -> new RuntimeException("Policy not found"));
-        
+                .orElseThrow(() -> new IllegalArgumentException("Policy not found"));
         checkAndSetExpiration(policy);
-
         return convertToResponseDTO(policy);
     }
 
     @Override
     public PolicyResponseDTO payPolicy(String policyId) {
         Policy policy = policyRepository.findById(policyId)
-                .orElseThrow(() -> new RuntimeException("Policy not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Policy not found"));
 
-        if (!policy.getStatus().equals("CREATED")) {
-            throw new IllegalStateException("Policy cannot be paid. Status is: " + policy.getStatus());
+        if (!"CREATED".equalsIgnoreCase(policy.getStatus())) {
+            return convertToResponseDTO(policy);
         }
 
         policy.setStatus("PAID");
@@ -117,31 +244,29 @@ public class PolicyServiceImpl implements PolicyService {
             op.setUpdatedAt(LocalDateTime.now());
         }
         orderedPlanRepository.saveAll(orderedPlans);
-        
+
         Policy savedPolicy = policyRepository.save(policy);
         return convertToResponseDTO(savedPolicy);
     }
 
     private void checkAndSetExpiration(Policy policy) {
-        if (policy.getStatus().equals("EXPIRED")) return; 
+        if ("EXPIRED".equals(policy.getStatus())) return;
 
         List<OrderedPlan> plans = policy.getOrderedPlans();
         boolean hasUnclaimedNonExpired = false;
         boolean hasClaimed = false;
 
         for (OrderedPlan op : plans) {
-            if (op.getStatus().equals("CLAIMED")) {
-                hasClaimed = true; 
-            }
+            if ("CLAIMED".equals(op.getStatus())) hasClaimed = true;
 
-            if (op.getExpiredDate().isBefore(LocalDate.now()) && !op.getStatus().equals("CLAIMED")) {
-                if (!op.getStatus().equals("EXPIRED")) { 
+            if (op.getExpiredDate().isBefore(LocalDate.now()) && !"CLAIMED".equals(op.getStatus())) {
+                if (!"EXPIRED".equals(op.getStatus())) {
                     op.setStatus("EXPIRED");
                     orderedPlanRepository.save(op);
                 }
             }
-            
-            if (!op.getStatus().equals("CLAIMED") && !op.getStatus().equals("EXPIRED")) {
+
+            if (!"CLAIMED".equals(op.getStatus()) && !"EXPIRED".equals(op.getStatus())) {
                 hasUnclaimedNonExpired = true;
             }
         }

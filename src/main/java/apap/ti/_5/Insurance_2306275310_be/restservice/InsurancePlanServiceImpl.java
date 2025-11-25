@@ -131,6 +131,15 @@ public class InsurancePlanServiceImpl implements InsurancePlanService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public List<InsurancePlanResponseDTO> getPlansByProviderId(String providerId) {
+        // Menggunakan query repository baru
+        return insurancePlanRepository.findAllByProviderIdAndDeletedAtIsNull(providerId)
+                .stream()
+                .map(this::convertToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
     private InsurancePlanResponseDTO convertToResponseDTO(InsurancePlan plan) {
         return InsurancePlanResponseDTO.builder()
                 .id(plan.getId())

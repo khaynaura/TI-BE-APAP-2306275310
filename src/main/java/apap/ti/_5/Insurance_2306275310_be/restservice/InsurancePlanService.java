@@ -22,5 +22,6 @@ public interface InsurancePlanService {
     List<InsurancePlanResponseDTO> searchPlansByName(String keyword);
 
     List<InsurancePlanResponseDTO> getPlansByApplicableService(ServiceEnum service); // untuk fitur di policy
-
+    
+    List<InsurancePlanResponseDTO> getPlansByProviderId(String providerId);
 }

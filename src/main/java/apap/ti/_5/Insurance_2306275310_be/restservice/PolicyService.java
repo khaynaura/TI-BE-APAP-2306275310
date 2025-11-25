@@ -15,4 +15,6 @@ public interface PolicyService {
 
     PolicyResponseDTO payPolicy(String policyId);
 
+    List<PolicyResponseDTO> getPoliciesByUserId(String userId);
+
 }

@@ -16,4 +16,6 @@ public interface ClaimService {
     ClaimDetailResponseDTO createClaim(String orderedPlanId, CreateClaimRequestDTO createDTO);
 
     ClaimDetailResponseDTO processClaim(String claimId, ProcessClaimRequestDTO processDTO);
+
+    boolean isClaimOwner(String claimId, String userId);
 }
