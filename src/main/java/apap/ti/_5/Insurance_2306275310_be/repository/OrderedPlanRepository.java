@@ -27,12 +27,15 @@ List<MonthlyOrderCount> findMonthlyOrderCounts(@Param("startDate") LocalDateTime
 List<MonthlyOrderCount> findMonthlyOrderCountsByService(@Param("startDate") LocalDateTime startDate, @Param("service") String service);
 
 @Query(value = """
-    SELECT EXTRACT(MONTH FROM op.created_at) as month, COUNT(op.id) as count
+    SELECT 
+        EXTRACT(MONTH FROM op.created_at) as month, 
+        COUNT(DISTINCT op.id) as count
     FROM ordered_plan op
     JOIN insurance_plan ip ON op.insurance_plan_id = ip.id
+    LEFT JOIN applicable_services aps ON ip.id = aps.insurance_plan_id
     WHERE op.created_at >= :startDate
-    AND (:service IS NULL OR ip.service LIKE CONCAT('%', :service, '%'))
     AND (:providerId IS NULL OR ip.provider_id = :providerId)
+    AND (:service IS NULL OR aps.service = :service)
     GROUP BY EXTRACT(MONTH FROM op.created_at)
     ORDER BY month ASC
     """, nativeQuery = true)
@@ -41,5 +44,6 @@ List<MonthlyOrderCount> findMonthlyStats(
     @Param("service") String service,
     @Param("providerId") String providerId
 );
+
 
 }

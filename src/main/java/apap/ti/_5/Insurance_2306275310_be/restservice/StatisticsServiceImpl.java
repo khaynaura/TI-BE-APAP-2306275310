@@ -31,11 +31,30 @@ public class StatisticsServiceImpl implements StatisticsService {
     private final OrderedPlanRepository orderedPlanRepository;
 
     @Override
-    public HomeSummaryResponseDTO getHomeSummary() {
-        // Summary global (bisa difilter juga kalau mau, tapi soal minta statistik chart yg difilter)
-        long totalPlans = insurancePlanRepository.countByDeletedAtIsNull();
-        long totalPolicies = policyRepository.count();
-        long totalClaims = claimRepository.count();
+    public HomeSummaryResponseDTO getHomeSummary(String userId, String role) {
+        long totalPlans = 0;
+        long totalPolicies = 0;
+        long totalClaims = 0;
+
+        // Logic percabangan berdasarkan parameter yang dikirim Controller
+        if ("ROLE_CUSTOMER".equals(role)) {
+            // CUSTOMER
+            totalPlans = insurancePlanRepository.countByDeletedAtIsNull(); 
+            totalPolicies = policyRepository.countByUserId(userId);
+            totalClaims = claimRepository.countByCustomerUserId(userId);
+
+        } else if ("ROLE_INSURANCE_PROVIDER".equals(role)) {
+            // PROVIDER
+            totalPlans = insurancePlanRepository.countByProviderIdAndDeletedAtIsNull(userId);
+            totalPolicies = policyRepository.countByProviderId(userId);
+            totalClaims = claimRepository.countByProviderId(userId);
+
+        } else {
+            // SUPERADMIN (Default)
+            totalPlans = insurancePlanRepository.countByDeletedAtIsNull();
+            totalPolicies = policyRepository.count();
+            totalClaims = claimRepository.count();
+        }
 
         return HomeSummaryResponseDTO.builder()
                 .totalInsurancePlans(totalPlans)
@@ -46,22 +65,27 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public ChartDataResponseDTO getChartStatistics(int timePeriod, String service, String providerId) {
+        // (Sama seperti sebelumnya, service ini sudah "dumb" karena providerId dikirim dari controller)
+        if (timePeriod <= 0) timePeriod = 3;
 
-        // 1. Tentukan Tanggal Mulai (H-Bulan)
         LocalDateTime startDate = LocalDateTime.now().minusMonths(timePeriod - 1)
                                       .withDayOfMonth(1).toLocalDate().atStartOfDay();
         
-        // 2. Normalisasi Filter Service ("All Services" -> null)
-        String serviceFilter = (service != null && !service.isBlank() && !service.equalsIgnoreCase("All Services")) 
-                                ? service : null;
+        String serviceFilter = null;
+        if (service != null && !service.isBlank() && !service.equalsIgnoreCase("All Services")) {
+            serviceFilter = service;
+        }
         
-        // 3. Panggil Repository Baru (yang support filter Provider)
         List<MonthlyOrderCount> results = orderedPlanRepository.findMonthlyStats(startDate, serviceFilter, providerId);
    
-        // 4. Convert ke DTO
+        if (results == null) {
+            results = new ArrayList<>();
+        }
+
         return convertToChartDTO(results, timePeriod);
     }
-
+    
+    // ... helper method convertToChartDTO sama ...
     private ChartDataResponseDTO convertToChartDTO(List<MonthlyOrderCount> results, int timePeriod) {
         Map<Integer, Long> resultMap = results.stream()
                 .collect(Collectors.toMap(
@@ -74,7 +98,6 @@ public class StatisticsServiceImpl implements StatisticsService {
         
         LocalDate currentDate = LocalDate.now();
 
-        // Loop mundur dari bulan ini ke belakang
         for (int i = timePeriod - 1; i >= 0; i--) {
             LocalDate monthDate = currentDate.minusMonths(i);
             int monthValue = monthDate.getMonthValue();

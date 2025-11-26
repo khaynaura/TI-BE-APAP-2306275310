@@ -24,7 +24,22 @@ public class StatisticsRestController {
 
     private final StatisticsService statisticsService;
 
-    // PBI-BE-I15: GET Insurance Statistics (Admin & Provider)
+    // Helper untuk ambil ID User
+    private String getCurrentUserId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return (auth != null) ? (String) auth.getPrincipal() : null;
+    }
+
+    // Helper untuk ambil Role Pertama
+    private String getCurrentUserRole() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && !auth.getAuthorities().isEmpty()) {
+            return auth.getAuthorities().iterator().next().getAuthority();
+        }
+        return null;
+    }
+
+    // PBI-BE-I15: GET Insurance Statistics (Chart)
     @GetMapping("/chart")
     @PreAuthorize("hasAnyRole('SUPERADMIN', 'INSURANCE_PROVIDER')")
     public ResponseEntity<BaseResponseDTO<ChartDataResponseDTO>> getChartStatistics(
@@ -33,21 +48,19 @@ public class StatisticsRestController {
     ) {
         var response = new BaseResponseDTO<ChartDataResponseDTO>();
         try {
-            // --- LOGIKA BARU: CEK ROLE ---
+            // 1. Ambil Info User di Controller
+            String userId = getCurrentUserId();
+            String role = getCurrentUserRole();
+            
             String providerId = null;
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            
-            // Cek apakah user yang login adalah INSURANCE_PROVIDER
-            boolean isProvider = auth.getAuthorities().stream()
-                    .anyMatch(a -> a.getAuthority().equals("ROLE_INSURANCE_PROVIDER"));
-            
-            if (isProvider) {
-                // Jika Provider, ambil ID-nya biar data difilter
-                providerId = (String) auth.getPrincipal();
-            }
-            // Jika Superadmin, providerId tetap null (artinya ambil semua data)
 
-            // Panggil service dengan parameter tambahan providerId
+            // 2. Tentukan apakah perlu filter Provider ID
+            if ("ROLE_INSURANCE_PROVIDER".equals(role)) {
+                providerId = userId; // Kalau Provider, filter pakai ID dia
+            }
+            // Kalau Superadmin, providerId tetap null (lihat semua)
+
+            // 3. Panggil Service (Service gak perlu cek SecurityContext lagi)
             ChartDataResponseDTO data = statisticsService.getChartStatistics(timePeriod, service, providerId);
             
             response.setStatus(HttpStatus.OK.value());
@@ -64,13 +77,18 @@ public class StatisticsRestController {
         }
     }
     
-    // Summary Homepage (Gak perlu diubah, ini global summary)
+    // Summary Homepage
     @GetMapping("/summary")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BaseResponseDTO<HomeSummaryResponseDTO>> getHomeSummary() {
         var baseResponseDTO = new BaseResponseDTO<HomeSummaryResponseDTO>();
         try {
-            HomeSummaryResponseDTO summaryDTO = statisticsService.getHomeSummary();
+            // 1. Ambil Info User di Controller
+            String userId = getCurrentUserId();
+            String role = getCurrentUserRole();
+
+            // 2. Lempar ID dan Role ke Service
+            HomeSummaryResponseDTO summaryDTO = statisticsService.getHomeSummary(userId, role);
 
             baseResponseDTO.setStatus(HttpStatus.OK.value());
             baseResponseDTO.setData(summaryDTO);

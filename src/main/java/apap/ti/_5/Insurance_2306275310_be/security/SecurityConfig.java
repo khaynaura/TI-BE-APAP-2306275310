@@ -71,6 +71,7 @@ public class SecurityConfig {
 
                 // --- STATISTICS ---
                 // I15: View Stats (Hanya Admin & Provider)
+                .requestMatchers(HttpMethod.GET, "/api/statistics/summary").hasAnyRole("SUPERADMIN", "INSURANCE_PROVIDER", "CUSTOMER")
                 .requestMatchers(HttpMethod.GET, "/api/statistics/**").hasAnyRole("SUPERADMIN", "INSURANCE_PROVIDER")
 
                                 // --- PAYMENT METHOD (PBI-BE-TU6 s/d TU9) ---

@@ -4,6 +4,7 @@ import apap.ti._5.Insurance_2306275310_be.model.ServiceEnum;
 import apap.ti._5.Insurance_2306275310_be.restdto.BaseResponseDTO;
 import apap.ti._5.Insurance_2306275310_be.restdto.request.insuranceplan.CreateInsurancePlanRequestDTO;
 import apap.ti._5.Insurance_2306275310_be.restdto.request.insuranceplan.UpdateInsurancePlanRequestDTO;
+import apap.ti._5.Insurance_2306275310_be.restdto.response.ProviderDTO;
 import apap.ti._5.Insurance_2306275310_be.restdto.response.insuranceplan.InsurancePlanResponseDTO;
 import apap.ti._5.Insurance_2306275310_be.restservice.InsurancePlanService;
 import jakarta.validation.Valid;
@@ -277,4 +278,23 @@ public class InsurancePlanRestController {
             return new ResponseEntity<>(baseResponseDTO, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    // Endpoint khusus Superadmin untuk dropdown create plan
+    @GetMapping("/providers")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    public ResponseEntity<BaseResponseDTO<List<ProviderDTO>>> getAllProviders() {
+        var response = new BaseResponseDTO<List<ProviderDTO>>();
+        try {
+            List<ProviderDTO> providers = insurancePlanService.getAllProviders();
+            response.setStatus(HttpStatus.OK.value());
+            response.setData(providers);
+            response.setMessage("List provider berhasil diambil");
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (Exception e) {
+            response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+            response.setMessage(e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    
 }

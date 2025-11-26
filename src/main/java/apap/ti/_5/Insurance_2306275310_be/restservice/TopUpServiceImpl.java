@@ -134,7 +134,7 @@ public class TopUpServiceImpl implements TopUpService {
     // ========================================================================
     private void updateBalanceInProfileService(UUID userId, Long topUpAmount) {
         // Target URL: http://localhost:8081/api/users/{id}
-        String url = profileServiceUrl + "/users/" + userId; 
+        String url = profileServiceUrl + "/api/users/" + userId; 
         
         // Ambil Token Superadmin dari request saat ini
         String token = getTokenFromRequest();

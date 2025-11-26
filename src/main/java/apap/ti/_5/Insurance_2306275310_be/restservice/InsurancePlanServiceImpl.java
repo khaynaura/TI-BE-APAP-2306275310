@@ -6,25 +6,42 @@ import apap.ti._5.Insurance_2306275310_be.repository.InsurancePlanRepository;
 import apap.ti._5.Insurance_2306275310_be.restdto.request.insuranceplan.CreateInsurancePlanRequestDTO;
 import apap.ti._5.Insurance_2306275310_be.restdto.request.insuranceplan.UpdateInsurancePlanRequestDTO;
 import apap.ti._5.Insurance_2306275310_be.restdto.response.insuranceplan.InsurancePlanResponseDTO;
+import apap.ti._5.Insurance_2306275310_be.restdto.response.ProviderDTO; // Pastikan DTO ini sudah dibuat
 import jakarta.transaction.Transactional;
-import lombok.AllArgsConstructor; 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 @Transactional
-@AllArgsConstructor
 public class InsurancePlanServiceImpl implements InsurancePlanService {
 
     private final InsurancePlanRepository insurancePlanRepository;
+    private final WebClient webClient;
+
+    // Ambil URL Profile Service dari application.yml
+    // Default fallback ke localhost:8081/api kalau belum diset
+    @Value("${profile.service.url:http://localhost:8082/api}")
+    private String profileServiceUrl;
+
+    // Constructor Injection (Manual biar bisa inject WebClient.Builder)
+    public InsurancePlanServiceImpl(InsurancePlanRepository insurancePlanRepository, 
+                                    WebClient.Builder webClientBuilder) {
+        this.insurancePlanRepository = insurancePlanRepository;
+        this.webClient = webClientBuilder.build();
+    }
 
     @Override
     public InsurancePlanResponseDTO createInsurancePlan(CreateInsurancePlanRequestDTO createDTO) {
-
         long totalPlans = insurancePlanRepository.countAll();
         String newId = "INS" + (totalPlans + 1);
 
@@ -48,24 +65,26 @@ public class InsurancePlanServiceImpl implements InsurancePlanService {
         return insurancePlanRepository.findAllByDeletedAtIsNull().stream()
                 .sorted((p1, p2) -> {
                     // Extract number from "INS1", "INS2", etc.
-                    int num1 = Integer.parseInt(p1.getId().substring(3));
-                    int num2 = Integer.parseInt(p2.getId().substring(3));
-                    return Integer.compare(num1, num2);
+                    try {
+                        int num1 = Integer.parseInt(p1.getId().substring(3));
+                        int num2 = Integer.parseInt(p2.getId().substring(3));
+                        return Integer.compare(num1, num2);
+                    } catch (NumberFormatException e) {
+                        return p1.getId().compareTo(p2.getId());
+                    }
                 })
-                .map(this::convertToResponseDTO) 
+                .map(this::convertToResponseDTO)
                 .collect(Collectors.toList());
     }
 
     @Override
     public InsurancePlanResponseDTO getPlanById(String id) {
-    
         InsurancePlan plan = insurancePlanRepository.findByIdAndDeletedAtIsNull(id)
-                .orElse(null); 
-      
+                .orElse(null);
+
         if (plan == null) {
-            return null; 
+            return null;
         }
-        
         return convertToResponseDTO(plan);
     }
 
@@ -84,7 +103,7 @@ public class InsurancePlanServiceImpl implements InsurancePlanService {
         plan.setCoverageDetails(updateDTO.getCoverageDetails());
         plan.setApplicableService(updateDTO.getApplicableService());
         plan.setExpiredByDays(updateDTO.getExpiredByDays());
-        // plan.setUpdatedAt(LocalDateTime.now());
+        // plan.setUpdatedAt(LocalDateTime.now()); // Otomatis via @PreUpdate
 
         InsurancePlan updatedPlan = insurancePlanRepository.save(plan);
         return convertToResponseDTO(updatedPlan);
@@ -92,27 +111,25 @@ public class InsurancePlanServiceImpl implements InsurancePlanService {
 
     @Override
     public InsurancePlanResponseDTO softDeletePlan(String id) {
-
         InsurancePlan plan = insurancePlanRepository.findByIdAndDeletedAtIsNull(id)
                 .orElse(null);
         if (plan == null) {
             return null;
         }
 
-        
         if (plan.getOrderedPlans() != null) {
             boolean allExpired = plan.getOrderedPlans().stream()
                     .allMatch(op -> op.getExpiredDate().isBefore(LocalDate.now()));
-            
+
             if (!allExpired) {
                 throw new IllegalStateException("Plan tidak dapat dihapus karena satu atau lebih Ordered Plan terkait belum expired.");
             }
         }
+        // Repository menggunakan @SQLDelete, jadi delete() akan memicu soft delete
         insurancePlanRepository.delete(plan);
 
         return convertToResponseDTO(plan);
     }
-
 
     @Override
     public List<InsurancePlanResponseDTO> searchPlansByName(String keyword) {
@@ -122,23 +139,61 @@ public class InsurancePlanServiceImpl implements InsurancePlanService {
         return insurancePlanRepository
                 .findAllByDeletedAtIsNullAndPlanNameContainingIgnoreCase(keyword)
                 .stream()
-                .sorted((p1, p2) -> {
-                    int num1 = Integer.parseInt(p1.getId().substring(3));
-                    int num2 = Integer.parseInt(p2.getId().substring(3));
-                    return Integer.compare(num1, num2);
-                })
                 .map(this::convertToResponseDTO)
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<InsurancePlanResponseDTO> getPlansByProviderId(String providerId) {
-        // Menggunakan query repository baru
         return insurancePlanRepository.findAllByProviderIdAndDeletedAtIsNull(providerId)
                 .stream()
                 .map(this::convertToResponseDTO)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public List<InsurancePlanResponseDTO> getPlansByApplicableService(ServiceEnum service) {
+        return insurancePlanRepository
+                .findByApplicableServiceContainingAndDeletedAtIsNull(service)
+                .stream()
+                .map(this::convertToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    // --- [NEW] METHOD FETCH PROVIDER UTK SUPERADMIN ---
+    @Override
+    public List<ProviderDTO> getAllProviders() {
+        String url = profileServiceUrl + "/api/users/endusers?role=INSURANCE_PROVIDER";
+        
+        String token = getTokenFromRequest();
+
+        try {
+            // Nembak Profile Service
+            Map response = webClient.get()
+                    .uri(url)
+                    .header(HttpHeaders.AUTHORIZATION, token) // Forward Token
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+
+            // Parsing Response JSON dari Profile Service
+            if (response != null && response.get("data") != null) {
+                List<Map<String, Object>> dataList = (List<Map<String, Object>>) response.get("data");
+                
+                return dataList.stream().map(item -> new ProviderDTO(
+                        (String) item.get("id"),
+                        (String) item.get("name"),
+                        (String) item.get("username")
+                )).collect(Collectors.toList());
+            }
+        } catch (Exception e) {
+            // Log error tapi jangan crash, return list kosong
+            System.err.println("Gagal mengambil data provider dari Profile Service: " + e.getMessage());
+        }
+        return new ArrayList<>();
+    }
+
+    // --- HELPER METHODS ---
 
     private InsurancePlanResponseDTO convertToResponseDTO(InsurancePlan plan) {
         return InsurancePlanResponseDTO.builder()
@@ -155,13 +210,11 @@ public class InsurancePlanServiceImpl implements InsurancePlanService {
                 .build();
     }
 
-    @Override
-    public List<InsurancePlanResponseDTO> getPlansByApplicableService(ServiceEnum service) {
-        // Kita panggil repository method yang sudah ada
-        return insurancePlanRepository
-                .findByApplicableServiceContainingAndDeletedAtIsNull(service)
-                .stream()
-                .map(this::convertToResponseDTO)
-                .collect(Collectors.toList());
+    private String getTokenFromRequest() {
+        ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attrs != null) {
+            return attrs.getRequest().getHeader(HttpHeaders.AUTHORIZATION);
+        }
+        return null;
     }
 }
