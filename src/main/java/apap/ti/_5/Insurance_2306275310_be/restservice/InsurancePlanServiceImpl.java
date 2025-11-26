@@ -160,39 +160,7 @@ public class InsurancePlanServiceImpl implements InsurancePlanService {
                 .collect(Collectors.toList());
     }
 
-    // --- [NEW] METHOD FETCH PROVIDER UTK SUPERADMIN ---
-    @Override
-    public List<ProviderDTO> getAllProviders() {
-        String url = profileServiceUrl + "/api/users/endusers?role=INSURANCE_PROVIDER";
-        
-        String token = getTokenFromRequest();
-
-        try {
-            // Nembak Profile Service
-            Map response = webClient.get()
-                    .uri(url)
-                    .header(HttpHeaders.AUTHORIZATION, token) // Forward Token
-                    .retrieve()
-                    .bodyToMono(Map.class)
-                    .block();
-
-            // Parsing Response JSON dari Profile Service
-            if (response != null && response.get("data") != null) {
-                List<Map<String, Object>> dataList = (List<Map<String, Object>>) response.get("data");
-                
-                return dataList.stream().map(item -> new ProviderDTO(
-                        (String) item.get("id"),
-                        (String) item.get("name"),
-                        (String) item.get("username")
-                )).collect(Collectors.toList());
-            }
-        } catch (Exception e) {
-            // Log error tapi jangan crash, return list kosong
-            System.err.println("Gagal mengambil data provider dari Profile Service: " + e.getMessage());
-        }
-        return new ArrayList<>();
-    }
-
+   
     // --- HELPER METHODS ---
 
     private InsurancePlanResponseDTO convertToResponseDTO(InsurancePlan plan) {
@@ -210,11 +178,5 @@ public class InsurancePlanServiceImpl implements InsurancePlanService {
                 .build();
     }
 
-    private String getTokenFromRequest() {
-        ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        if (attrs != null) {
-            return attrs.getRequest().getHeader(HttpHeaders.AUTHORIZATION);
-        }
-        return null;
-    }
+
 }

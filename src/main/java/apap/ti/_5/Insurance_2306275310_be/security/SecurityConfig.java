@@ -74,6 +74,11 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/statistics/summary").hasAnyRole("SUPERADMIN", "INSURANCE_PROVIDER", "CUSTOMER")
                 .requestMatchers(HttpMethod.GET, "/api/statistics/**").hasAnyRole("SUPERADMIN", "INSURANCE_PROVIDER")
 
+
+                .requestMatchers("/api/external/providers").hasRole("SUPERADMIN")
+                .requestMatchers("/api/external/customers").hasRole("SUPERADMIN")
+   
+                .requestMatchers("/api/external/bookings").authenticated() 
                                 // --- PAYMENT METHOD (PBI-BE-TU6 s/d TU9) ---
                 // Semua fitur Payment Method HANYA untuk Superadmin
                 .requestMatchers("/api/payment-method/**").hasRole("SUPERADMIN")

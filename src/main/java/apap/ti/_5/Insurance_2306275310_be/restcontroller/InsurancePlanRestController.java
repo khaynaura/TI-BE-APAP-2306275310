@@ -279,22 +279,4 @@ public class InsurancePlanRestController {
         }
     }
 
-    // Endpoint khusus Superadmin untuk dropdown create plan
-    @GetMapping("/providers")
-    @PreAuthorize("hasRole('SUPERADMIN')")
-    public ResponseEntity<BaseResponseDTO<List<ProviderDTO>>> getAllProviders() {
-        var response = new BaseResponseDTO<List<ProviderDTO>>();
-        try {
-            List<ProviderDTO> providers = insurancePlanService.getAllProviders();
-            response.setStatus(HttpStatus.OK.value());
-            response.setData(providers);
-            response.setMessage("List provider berhasil diambil");
-            return new ResponseEntity<>(response, HttpStatus.OK);
-        } catch (Exception e) {
-            response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
-            response.setMessage(e.getMessage());
-            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-    
 }

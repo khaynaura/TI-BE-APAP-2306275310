@@ -26,5 +26,4 @@ public interface InsurancePlanService {
 
     List<InsurancePlanResponseDTO> getPlansByProviderId(String providerId);
 
-    List<ProviderDTO> getAllProviders();
 }
