@@ -147,30 +147,43 @@ public class PolicyRestController {
             return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
     }
-
-    // PBI-BE-I12: Callback Pembayaran (Public Endpoint dipanggil Billing Service)
     @PostMapping("/notify-payment")
     public ResponseEntity<BaseResponseDTO<Object>> receivePaymentNotification(@RequestBody Map<String, Object> payload) {
         var response = new BaseResponseDTO<>();
         try {
-            // Asumsi payload dari Billing Service: { "refId": "POL1", "status": "PAID" }
-            String policyId = (String) payload.get("refId"); 
-            String status = (String) payload.get("status");
-
-            if ("PAID".equalsIgnoreCase(status)) {
-                policyService.payPolicy(policyId);
-                response.setMessage("Payment processed successfully for Policy ID: " + policyId);
-            } else {
-                response.setMessage("Notification received. Status not PAID, ignored.");
+            // [FIX] Sesuaikan Key dengan apa yang dikirim Billing Service
+            // Biasanya mereka membalikan "serviceReferenceId" yang kita kirim di awal
+            String policyId = (String) payload.get("serviceReferenceId"); 
+            
+            // Fallback: Kalau null, coba cek key "refId" (siapa tau dokumentasi billing beda)
+            if (policyId == null) {
+                policyId = (String) payload.get("refId");
             }
 
-            response.setStatus(HttpStatus.OK.value());
+            String status = (String) payload.get("status");
+
+            if (policyId == null || status == null) {
+                throw new IllegalArgumentException("Invalid Payload: Missing serviceReferenceId or status");
+            }
+
+            if ("PAID".equalsIgnoreCase(status)) {
+                // Panggil Service untuk ubah status jadi PAID
+                policyService.payPolicy(policyId);
+                
+                response.setStatus(HttpStatus.OK.value());
+                response.setMessage("Payment processed successfully for Policy ID: " + policyId);
+            } else {
+                // Handle status lain (Failed/Expired) jika perlu
+                response.setStatus(HttpStatus.OK.value());
+                response.setMessage("Notification received. Status: " + status);
+            }
+
             response.setTimestamp(new Date());
             return new ResponseEntity<>(response, HttpStatus.OK);
+
         } catch (Exception e) {
             response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
             response.setMessage("Error processing payment callback: " + e.getMessage());
-            response.setTimestamp(new Date());
             return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

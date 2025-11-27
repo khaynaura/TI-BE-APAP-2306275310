@@ -169,38 +169,59 @@ public class PolicyServiceImpl implements PolicyService {
         }
     }
 
-    // === METHOD CREATE BILL ===
+    // === METHOD CREATE BILL (SESUAI PBI BILLING) ===
     private void createBill(Policy policy) {
         try {
+            // 1. Persiapkan Payload Sesuai PBI-BE-B1
             Map<String, Object> billPayload = new HashMap<>();
-            billPayload.put("policyId", policy.getId());
-            billPayload.put("bookingId", policy.getBookingId());
-            billPayload.put("amount", policy.getTotalPrice());
-            billPayload.put("description", "Asuransi " + policy.getService());
             
+            // [MANDATORY] ID Customer (Diambil dari Policy)
+            billPayload.put("customerId", policy.getUserId()); 
+            
+            // [MANDATORY] Nama Service (Harus "Insurance" sesuai enum di Billing)
+            billPayload.put("serviceName", "Insurance");
+            
+            // [MANDATORY] ID Referensi (Policy ID kita)
+            // Nanti pas Billing callback, dia bakal balikin ID ini sebagai refId
+            billPayload.put("serviceReferenceId", policy.getId());
+            
+            // [MANDATORY] Deskripsi
+            billPayload.put("description", "Insurance Payment for Booking " + policy.getBookingId());
+            
+            // [MANDATORY] Harga
+            billPayload.put("amount", policy.getTotalPrice());
+
             String token = getTokenFromRequest();
 
-            webClient.post()
+            // 2. Tembak API Billing
+            Map response = webClient.post()
                     .uri(billingServiceUrl + "/api/bill/create")
-                    .header(HttpHeaders.AUTHORIZATION, token) // Kirim token juga
+                    .header(HttpHeaders.AUTHORIZATION, token)
                     .bodyValue(billPayload)
                     .retrieve()
-                    .bodyToMono(Object.class)
+                    .bodyToMono(Map.class)
                     .block();
 
-        } catch (Exception e) {
-            // Cuma log error, jangan bikin policy gagal
-            System.err.println("INFO: Gagal membuat Bill (Mungkin Service Billing mati/belum siap).");
-        }
-    }
+            // 3. Tangkap Response & Simpan Bill ID
+            // PBI B1: "Mengembalikan detail Bill yang baru dibuat"
+            if (response != null && response.get("data") != null) {
+                Map<String, Object> data = (Map<String, Object>) response.get("data");
+                
+                // Ambil ID Bill dari response Billing
+                // Asumsi key-nya adalah "id" atau "billId" (sesuaikan dengan JSON temanmu)
+                String billIdFromBilling = (String) data.get("id"); 
+                
+                // Update Policy kita dengan Bill ID
+                policy.setBillId(billIdFromBilling);
+                policyRepository.save(policy);
+                
+                System.out.println(">>> BILL CREATED SUCCESSFULLY. Bill ID: " + billIdFromBilling);
+            }
 
-    // Helper Ambil Token
-    private String getTokenFromRequest() {
-        ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        if (attrs != null) {
-            return attrs.getRequest().getHeader(HttpHeaders.AUTHORIZATION);
+        } catch (Exception e) {
+            System.err.println("WARNING: Gagal membuat Bill. User tidak bisa bayar via sistem.");
+            System.err.println("Error: " + e.getMessage());
         }
-        return null;
     }
 
     // --- SISA METHOD CRUD ---
@@ -286,6 +307,7 @@ public class PolicyServiceImpl implements PolicyService {
                 .id(policy.getId())
                 .bookingId(policy.getBookingId())
                 .userId(policy.getUserId())
+                .billId(policy.getBillId())
                 .service(policy.getService())
                 .startDate(policy.getStartDate())
                 .status(policy.getStatus())
@@ -306,4 +328,13 @@ public class PolicyServiceImpl implements PolicyService {
                 .claimsCount(op.getClaims() != null ? op.getClaims().size() : 0)
                 .build();
     }
+
+        // Helper: Ambil Token dari Header Request
+        private String getTokenFromRequest() {
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs != null) {
+                return attrs.getRequest().getHeader(HttpHeaders.AUTHORIZATION);
+            }
+            return null; // Atau throw error jika wajib ada
+        }
 }

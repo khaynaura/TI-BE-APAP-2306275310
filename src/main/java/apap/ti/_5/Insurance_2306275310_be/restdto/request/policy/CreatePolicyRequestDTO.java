@@ -28,4 +28,5 @@ public class CreatePolicyRequestDTO {
 
     @NotEmpty(message = "Choose at least one insurance plan")
     private List<String> insurancePlanIds; 
+    
 }

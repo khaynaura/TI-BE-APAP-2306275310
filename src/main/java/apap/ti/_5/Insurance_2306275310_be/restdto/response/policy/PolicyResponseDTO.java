@@ -19,6 +19,7 @@ public class PolicyResponseDTO {
     private String id; 
     private String bookingId;
     private String userId;
+    private String billId; 
     private ServiceEnum service;
     private LocalDate startDate;
     private String status;

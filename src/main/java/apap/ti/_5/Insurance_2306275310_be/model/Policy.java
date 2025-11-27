@@ -69,4 +69,7 @@ public class Policy {
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
+
+    @Column(name = "bill_id") 
+    private String billId; 
 }
