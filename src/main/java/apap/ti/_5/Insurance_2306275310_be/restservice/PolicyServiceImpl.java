@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -166,30 +167,46 @@ public class PolicyServiceImpl implements PolicyService {
         }
     }
 
+    // === METHOD CREATE BILL (SESUAI DTO TEMANMU) ===
     private void createBill(Policy policy) {
         try {
             Map<String, Object> billPayload = new HashMap<>();
-            billPayload.put("policyId", policy.getId());
-            billPayload.put("bookingId", policy.getBookingId());
-            billPayload.put("amount", policy.getTotalPrice());
-            billPayload.put("description", "Asuransi " + policy.getService());
+            
+            // 1. customerId (Wajib UUID)
+            billPayload.put("customerId", UUID.fromString(policy.getUserId()));
+            
+            // 2. serviceName (Wajib lowercase "insurance")
+            billPayload.put("serviceName", "insurance");
+            
+            // 3. serviceReferenceId (ID Policy Kita)
+            billPayload.put("serviceReferenceId", policy.getId());
+            
+            // 4. description
+            billPayload.put("description", "Insurance Policy Payment for " + policy.getService());
+            
+            // 5. amount (Wajib Long/Number)
+            billPayload.put("amount", Long.valueOf(policy.getTotalPrice()));
 
             String token = getTokenFromRequest();
 
+            // Tembak API Teman: /api/bill/cre
             webClient.post()
-                    .uri(billingServiceUrl + "/api/bill/create")
+                    .uri(billingServiceUrl + "/api/bill/create") 
                     .header(HttpHeaders.AUTHORIZATION, token)
                     .bodyValue(billPayload)
                     .retrieve()
                     .bodyToMono(Object.class)
                     .block();
 
+            System.out.println(">>> Bill Created Successfully for " + policy.getId());
+
+        } catch (IllegalArgumentException e) {
+            System.err.println("ERROR: User ID bukan UUID valid, tidak bisa buat bill: " + e.getMessage());
         } catch (Exception e) {
-            System.err.println("INFO: Gagal membuat Bill (Mungkin Service Billing mati/belum siap).");
+            System.err.println("WARNING: Gagal membuat Bill ke Billing Service: " + e.getMessage());
         }
     }
 
-    // ... (SISA METHOD GET & HELPER TIDAK BERUBAH) ...
     @Override
     public List<PolicyResponseDTO> getAllPolicies() {
         List<Policy> allPolicies = policyRepository.findAll();

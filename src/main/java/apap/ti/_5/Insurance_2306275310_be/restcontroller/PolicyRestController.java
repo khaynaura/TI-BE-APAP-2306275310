@@ -174,23 +174,21 @@ public class PolicyRestController {
     /**
      * Menerima notifikasi pembayaran.
      */
-    @PostMapping("/notify-payment")
-    public ResponseEntity<BaseResponseDTO<Object>> receivePaymentNotification(@RequestBody Map<String, Object> payload) {
+    @PostMapping("/{policyId}/payment-callback")
+    public ResponseEntity<BaseResponseDTO<Object>> handlePaymentCallback(
+            @PathVariable("policyId") String policyId, 
+            @RequestBody Map<String, Object> payload
+    ) {
         var response = new BaseResponseDTO<>();
         try {
-            String policyId = (String) payload.get("serviceReferenceId"); 
-            
-            // Fallback: Kalau null, coba cek key "refId" (siapa tau dokumentasi billing beda)
-            if (policyId == null) {
-                policyId = (String) payload.get("refId");
-            }
-
+            // 1. Ambil status dari payload (dikirim oleh Billing Service)
             String status = (String) payload.get("status");
 
-            if (policyId == null || status == null) {
-                throw new IllegalArgumentException("Invalid Payload: Missing serviceReferenceId or status");
+            if (status == null) {
+                throw new IllegalArgumentException("Invalid Payload: Missing status");
             }
 
+            // 2. Cek jika status PAID
             if ("PAID".equalsIgnoreCase(status)) {
                 // Panggil Service untuk ubah status jadi PAID
                 policyService.payPolicy(policyId);
@@ -198,9 +196,8 @@ public class PolicyRestController {
                 response.setStatus(HttpStatus.OK.value());
                 response.setMessage("Payment processed successfully for Policy ID: " + policyId);
             } else {
-                // Handle status lain (Failed/Expired) jika perlu
                 response.setStatus(HttpStatus.OK.value());
-                response.setMessage("Notification received. Status: " + status);
+                response.setMessage("Notification received but ignored. Status: " + status);
             }
 
             response.setTimestamp(new Date());
