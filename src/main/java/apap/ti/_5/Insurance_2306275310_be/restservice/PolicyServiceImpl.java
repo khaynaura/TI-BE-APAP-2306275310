@@ -115,6 +115,7 @@ public class PolicyServiceImpl implements PolicyService {
         return convertToResponseDTO(savedPolicy);
     }
 
+// === METHOD CREATE BILL (FIXED: CAPTURE ID) ===
     private void createBill(Policy policy) {
         try {
             Map<String, Object> billPayload = new HashMap<>();
@@ -124,22 +125,28 @@ public class PolicyServiceImpl implements PolicyService {
             billPayload.put("description", "Insurance Policy " + policy.getId());
             billPayload.put("amount", Long.valueOf(policy.getTotalPrice()));
 
-            // PENTING: Kita TIDAK pakai getTokenFromRequest() (JWT User)
-            // Kita pakai API Key karena ini komunikasi antar Service
-            
-            webClient.post()
+            // Tembak API Billing (Pakai API Key)
+            Map response = webClient.post()
                     .uri(billingServiceUrl + "/api/bill/create")
-                    // [UBAH HEADER] Pakai X-API-KEY (atau nama header yg disepakati)
-                    .header("X-API-KEY", billingApiKey) 
+                    .header("X-API-KEY", billingApiKey)
                     .bodyValue(billPayload)
                     .retrieve()
-                    .bodyToMono(Map.class) // Atau Object.class
+                    .bodyToMono(Map.class)
                     .block();
 
-            System.out.println(">>> Bill Created Successfully via API Key");
+            // [PENTING] Ambil ID dari Response dan Simpan ke DB
+            if (response != null && response.get("data") != null) {
+                Map<String, Object> data = (Map<String, Object>) response.get("data");
+                String billId = String.valueOf(data.get("id"));
+
+                // Update Policy dengan Bill ID
+                policy.setBillId(billId);
+                policyRepository.save(policy);
+                
+                System.out.println(">>> Bill Created & Linked. ID: " + billId);
+            }
 
         } catch (Exception e) {
-            // Log error tapi jangan crash (tetap return policy created)
             System.err.println("WARNING: Gagal membuat Bill: " + e.getMessage());
         }
     }
