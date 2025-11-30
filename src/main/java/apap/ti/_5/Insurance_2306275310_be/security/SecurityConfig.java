@@ -36,7 +36,7 @@ public class SecurityConfig {
 
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/public/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/policy/notify-payment").permitAll() 
+                .requestMatchers(HttpMethod.POST, "/api/policy/*/payment-callback").permitAll()
 
                 .requestMatchers(HttpMethod.GET, "/api/insurance-plan/**").hasAnyRole("SUPERADMIN", "INSURANCE_PROVIDER", "CUSTOMER")
                 
