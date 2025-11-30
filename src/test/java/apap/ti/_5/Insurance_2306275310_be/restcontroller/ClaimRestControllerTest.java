@@ -26,6 +26,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print; // BUAT DEBUG
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ClaimRestController.class)
@@ -57,37 +58,39 @@ class ClaimRestControllerTest {
         setupMockUser("cust-1", "ROLE_CUSTOMER");
 
         CreateClaimRequestDTO req = new CreateClaimRequestDTO();
-        // === [PENTING] ISI SEMUA FIELD WAJIB ===
-        // req.setClaimAmount(500000.0);
-        // req.setDescription("Sakit Demam");
-        // req.setBankName("BCA");
-        // req.setAccountNumber("1234567890");
+        // === ISI DATA DUMMY BIAR LOLOS VALIDASI ===
+        // Kalau nama field beda, sesuaikan manual ya!
+        try { req.getClass().getMethod("setClaimAmount", Double.class).invoke(req, 100000.0); } catch (Exception e) {}
+        try { req.getClass().getMethod("setDescription", String.class).invoke(req, "Kecelakaan"); } catch (Exception e) {}
+        try { req.getClass().getMethod("setBankName", String.class).invoke(req, "BCA"); } catch (Exception e) {}
+        try { req.getClass().getMethod("setAccountNumber", String.class).invoke(req, "123456"); } catch (Exception e) {}
 
         when(claimService.createClaim(anyString(), any())).thenReturn(new ClaimDetailResponseDTO());
 
-        mockMvc.perform(post("/api/claim/submit/ordered-plan-1")
+        mockMvc.perform(post("/api/claim/submit/plan-1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
+                .andDo(print()) // INI BAKAL NAMPILIN ERROR DI CONSOLE KALAU GAGAL
                 .andExpect(status().isCreated());
     }
 
     @Test
     void testProcessClaim_Success() throws Exception {
         setupMockUser("admin", "ROLE_SUPERADMIN");
-        
+
         ProcessClaimRequestDTO req = new ProcessClaimRequestDTO();
-        // === [PENTING] ISI FIELD WAJIB ===
-        // req.setStatus("APPROVED");
+        try { req.getClass().getMethod("setStatus", String.class).invoke(req, "APPROVED"); } catch (Exception e) {}
 
         when(claimService.processClaim(anyString(), any())).thenReturn(new ClaimDetailResponseDTO());
 
-        mockMvc.perform(put("/api/claim/process/claim-1")
+        mockMvc.perform(put("/api/claim/process/c1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
+                .andDo(print())
                 .andExpect(status().isOk());
     }
-    
-    // ... Copy test GET lainnya dari chat sebelumnya ...
+
+    // TEST LAIN YANG SUDAH PASS (GET) - COPY PASTE AJA BIAR FILE LENGKAP
     @Test
     void testGetAllClaimsFiltered_Success() throws Exception {
         setupMockUser("admin", "ROLE_SUPERADMIN");

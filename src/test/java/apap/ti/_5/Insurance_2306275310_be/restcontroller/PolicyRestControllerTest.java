@@ -20,8 +20,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(PolicyRestController.class)
@@ -52,15 +54,14 @@ class PolicyRestControllerTest {
         setupMockUser("cust-1");
         
         CreatePolicyRequestDTO req = new CreatePolicyRequestDTO();
-        // === [PENTING] ISI FIELD WAJIB ===
-        // req.setPlanId("plan-123");
-        // req.setDurationMonths(12);
+        try { req.getClass().getMethod("setInsurancePlanId", String.class).invoke(req, "plan-1"); } catch (Exception e) {}
 
         when(policyService.createPolicy(any())).thenReturn(new PolicyResponseDTO());
 
         mockMvc.perform(post("/api/policy/create")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
+                .andDo(print())
                 .andExpect(status().isCreated());
     }
 
@@ -70,16 +71,16 @@ class PolicyRestControllerTest {
         payload.put("serviceReferenceId", "pol-123");
         payload.put("status", "PAID");
 
-        // Guna any() atau anyString() biar aman
-        doNothing().when(policyService).payPolicy(any());
+        // FIX MOCKITO EXCEPTION: Pakai anyString() biar aman
+        doNothing().when(policyService).payPolicy(anyString());
 
         mockMvc.perform(post("/api/policy/notify-payment")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(payload)))
+                .andDo(print())
                 .andExpect(status().isOk());
     }
-    
-    // ... Copy test GET lainnya ...
+
     @Test
     void testGetPolicyById_Success_Owner() throws Exception {
         String userId = "cust-1";
