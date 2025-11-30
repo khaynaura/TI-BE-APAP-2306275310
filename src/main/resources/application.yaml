@@ -40,7 +40,7 @@ rental:
 billing:
   service:
     url: ${BILLING_SERVICE_URL:http://localhost:8085}
+  api-key: "super-secret-key-123-insurance"
 
-insurance:
-  api-key: ${INSURANCE_API_KEY:super-secret-key-123-insurance}
+
   

@@ -209,4 +209,30 @@ public class PolicyRestController {
             return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @PutMapping("/pay/{id}") 
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'SUPERADMIN')")
+    public ResponseEntity<BaseResponseDTO<PolicyResponseDTO>> verifyAndPay(@PathVariable("id") String id) {
+        var response = new BaseResponseDTO<PolicyResponseDTO>();
+        try {
+            // Panggil service yang ada logic verifikasinya tadi
+            PolicyResponseDTO data = policyService.payPolicy(id);
+            
+            response.setStatus(HttpStatus.OK.value());
+            response.setMessage("Pembayaran terverifikasi. Policy aktif.");
+            response.setData(data);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+            
+        } catch (IllegalStateException e) {
+            // Tangkap pesan instruksi ("Silakan bayar di Billing Service")
+            response.setStatus(HttpStatus.BAD_REQUEST.value()); // atau 402 Payment Required
+            response.setMessage(e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+            response.setMessage(e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    
 }

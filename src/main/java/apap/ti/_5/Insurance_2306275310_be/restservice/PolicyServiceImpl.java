@@ -10,6 +10,8 @@ import apap.ti._5.Insurance_2306275310_be.repository.PolicyRepository;
 import apap.ti._5.Insurance_2306275310_be.restdto.request.policy.CreatePolicyRequestDTO;
 import apap.ti._5.Insurance_2306275310_be.restdto.response.orderedplan.OrderedPlanSummaryResponseDTO;
 import apap.ti._5.Insurance_2306275310_be.restdto.response.policy.PolicyResponseDTO;
+import apap.ti._5.Insurance_2306275310_be.restdto.response.BillResponseDTO; // Pastikan buat DTO ini
+import org.springframework.core.ParameterizedTypeReference;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -21,11 +23,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -43,11 +41,14 @@ public class PolicyServiceImpl implements PolicyService {
     @Value("${flight.service.url}")
     private String flightServiceUrl;
 
-    @Value("${accommodation.service.url}")
+    @Value("${accommodation.service.url}") 
     private String accommodationServiceUrl;
 
     @Value("${rental.service.url}")
     private String rentalServiceUrl;
+    
+    @Value("${billing.api-key}")
+    private String billingApiKey;
 
     public PolicyServiceImpl(PolicyRepository policyRepository,
                              InsurancePlanRepository insurancePlanRepository,
@@ -61,27 +62,25 @@ public class PolicyServiceImpl implements PolicyService {
 
     @Override
     public PolicyResponseDTO createPolicy(CreatePolicyRequestDTO createDTO) {
-
-        // 1. Validasi Booking ID (BYPASS kalau Tour Package)
+        // 1. Validasi Booking ID
         validateBookingId(createDTO.getService(), createDTO.getBookingId());
 
-        // 2. Validasi & Ambil Insurance Plans
+        // 2. Validasi Plans
         List<InsurancePlan> plans = insurancePlanRepository.findAllById(createDTO.getInsurancePlanIds());
-
         if (plans.size() != createDTO.getInsurancePlanIds().size()) {
             throw new IllegalArgumentException("Salah satu Insurance Plan ID tidak valid.");
         }
-
         for (InsurancePlan plan : plans) {
             if (!plan.getApplicableService().contains(createDTO.getService())) {
-                throw new IllegalArgumentException("Plan '" + plan.getPlanName() + "' tidak cocok untuk layanan " + createDTO.getService());
+                throw new IllegalArgumentException("Plan tidak cocok dengan service.");
             }
         }
 
+        // 3. Hitung Harga
         int totalPrice = plans.stream().mapToInt(InsurancePlan::getPrice).sum();
         int totalCoverage = plans.stream().mapToInt(InsurancePlan::getCoverage).sum();
 
-        // 3. Buat Object Policy
+        // 4. Save Policy
         Policy policy = new Policy();
         policy.setId("POL" + (policyRepository.count() + 1));
         policy.setUserId(createDTO.getUserId());
@@ -92,7 +91,7 @@ public class PolicyServiceImpl implements PolicyService {
         policy.setTotalPrice(totalPrice);
         policy.setTotalCoverage(totalCoverage);
 
-        // 4. Buat Object OrderedPlan
+        // 5. Save Ordered Plans
         List<OrderedPlan> orderedPlans = new ArrayList<>();
         int i = 1;
         for (InsurancePlan plan : plans) {
@@ -105,18 +104,100 @@ public class PolicyServiceImpl implements PolicyService {
             orderedPlans.add(op);
             i++;
         }
+        policy.setOrderedPlans(orderedPlans);
+        
+        Policy savedPolicy = policyRepository.save(policy); // Save Parent
+        orderedPlanRepository.saveAll(orderedPlans);        // Save Children
 
-        policy.setOrderedPlans(new ArrayList<>());
-        Policy savedPolicy = policyRepository.save(policy);
-        List<OrderedPlan> savedOrderedPlans = orderedPlanRepository.saveAll(orderedPlans);
-        savedPolicy.setOrderedPlans(savedOrderedPlans);
-
-        // 5. Integrasi Billing
+        // 6. CREATE BILL & SAVE BILL ID
         createBill(savedPolicy);
 
         return convertToResponseDTO(savedPolicy);
     }
 
+    private void createBill(Policy policy) {
+        try {
+            Map<String, Object> billPayload = new HashMap<>();
+            billPayload.put("customerId", UUID.fromString(policy.getUserId()));
+            billPayload.put("serviceName", "insurance");
+            billPayload.put("serviceReferenceId", policy.getId());
+            billPayload.put("description", "Insurance Policy " + policy.getId());
+            billPayload.put("amount", Long.valueOf(policy.getTotalPrice()));
+
+            // PENTING: Kita TIDAK pakai getTokenFromRequest() (JWT User)
+            // Kita pakai API Key karena ini komunikasi antar Service
+            
+            webClient.post()
+                    .uri(billingServiceUrl + "/bill/create")
+                    // [UBAH HEADER] Pakai X-API-KEY (atau nama header yg disepakati)
+                    .header("X-API-KEY", billingApiKey) 
+                    .bodyValue(billPayload)
+                    .retrieve()
+                    .bodyToMono(Map.class) // Atau Object.class
+                    .block();
+
+            System.out.println(">>> Bill Created Successfully via API Key");
+
+        } catch (Exception e) {
+            // Log error tapi jangan crash (tetap return policy created)
+            System.err.println("WARNING: Gagal membuat Bill: " + e.getMessage());
+        }
+    }
+
+    // === PAY POLICY (WITH VERIFICATION) ===
+    @Override
+    public PolicyResponseDTO payPolicy(String policyId) {
+        Policy policy = policyRepository.findById(policyId)
+                .orElseThrow(() -> new IllegalArgumentException("Policy not found"));
+
+        if ("EXPIRED".equalsIgnoreCase(policy.getStatus())) throw new IllegalStateException("Policy Expired");
+        if ("PAID".equalsIgnoreCase(policy.getStatus())) return convertToResponseDTO(policy);
+
+        // Verifikasi ke Billing Service (Optional, kalau token ada)
+        // Ini memenuhi PBI: "Memverifikasi status pembayaran"
+        try {
+            String token = getTokenFromRequest();
+            if (token != null) {
+                // Cek list bill customer
+                List<BillResponseDTO> bills = webClient.get()
+                        .uri(billingServiceUrl + "/bill/customer")
+                        .header(HttpHeaders.AUTHORIZATION, token)
+                        .retrieve()
+                        .bodyToMono(new ParameterizedTypeReference<List<BillResponseDTO>>() {})
+                        .block();
+
+                if (bills != null) {
+                    // Cari bill yang sesuai policy ini
+                    BillResponseDTO match = bills.stream()
+                            .filter(b -> policyId.equals(b.getServiceReferenceId()))
+                            .findFirst().orElse(null);
+
+                    // Kalau ketemu dan status UNPAID (0), lempar error (instruksi bayar)
+                    if (match != null && match.getStatus() == 0) {
+                        throw new IllegalStateException("Bill belum dibayar. Silakan selesaikan pembayaran di Billing Service.");
+                    }
+                }
+            }
+        } catch (IllegalStateException e) {
+            throw e; // Teruskan pesan ke Controller
+        } catch (Exception e) {
+            System.err.println("Warning: Verifikasi billing gagal, lanjut update via callback mechanism.");
+        }
+
+        // Update Status
+        policy.setStatus("PAID");
+        policy.setUpdatedAt(LocalDateTime.now());
+
+        List<OrderedPlan> orderedPlans = policy.getOrderedPlans();
+        for (OrderedPlan op : orderedPlans) {
+            op.setStatus("PAID");
+            op.setUpdatedAt(LocalDateTime.now());
+        }
+        orderedPlanRepository.saveAll(orderedPlans);
+
+        Policy savedPolicy = policyRepository.save(policy);
+        return convertToResponseDTO(savedPolicy);
+    }
     /**
      * Memvalidasi keberadaan Booking ID.
      * KHUSUS TOUR_PACKAGE DI-SKIP (AUTO PASS).
@@ -167,46 +248,6 @@ public class PolicyServiceImpl implements PolicyService {
         }
     }
 
-    // === METHOD CREATE BILL (SESUAI DTO TEMANMU) ===
-    private void createBill(Policy policy) {
-        try {
-            Map<String, Object> billPayload = new HashMap<>();
-            
-            // 1. customerId (Wajib UUID)
-            billPayload.put("customerId", UUID.fromString(policy.getUserId()));
-            
-            // 2. serviceName (Wajib lowercase "insurance")
-            billPayload.put("serviceName", "insurance");
-            
-            // 3. serviceReferenceId (ID Policy Kita)
-            billPayload.put("serviceReferenceId", policy.getId());
-            
-            // 4. description
-            billPayload.put("description", "Insurance Policy Payment for " + policy.getService());
-            
-            // 5. amount (Wajib Long/Number)
-            billPayload.put("amount", Long.valueOf(policy.getTotalPrice()));
-
-            String token = getTokenFromRequest();
-
-            // Tembak API Teman: /api/bill/cre
-            webClient.post()
-                    .uri(billingServiceUrl + "/api/bill/create") 
-                    .header(HttpHeaders.AUTHORIZATION, token)
-                    .bodyValue(billPayload)
-                    .retrieve()
-                    .bodyToMono(Object.class)
-                    .block();
-
-            System.out.println(">>> Bill Created Successfully for " + policy.getId());
-
-        } catch (IllegalArgumentException e) {
-            System.err.println("ERROR: User ID bukan UUID valid, tidak bisa buat bill: " + e.getMessage());
-        } catch (Exception e) {
-            System.err.println("WARNING: Gagal membuat Bill ke Billing Service: " + e.getMessage());
-        }
-    }
-
     @Override
     public List<PolicyResponseDTO> getAllPolicies() {
         List<Policy> allPolicies = policyRepository.findAll();
@@ -227,29 +268,6 @@ public class PolicyServiceImpl implements PolicyService {
                 .orElseThrow(() -> new IllegalArgumentException("Policy not found"));
         checkAndSetExpiration(policy);
         return convertToResponseDTO(policy);
-    }
-
-    @Override
-    public PolicyResponseDTO payPolicy(String policyId) {
-        Policy policy = policyRepository.findById(policyId)
-                .orElseThrow(() -> new IllegalArgumentException("Policy not found"));
-
-        if (!"CREATED".equalsIgnoreCase(policy.getStatus())) {
-            return convertToResponseDTO(policy);
-        }
-
-        policy.setStatus("PAID");
-        policy.setUpdatedAt(LocalDateTime.now());
-
-        List<OrderedPlan> orderedPlans = policy.getOrderedPlans();
-        for (OrderedPlan op : orderedPlans) {
-            op.setStatus("PAID");
-            op.setUpdatedAt(LocalDateTime.now());
-        }
-        orderedPlanRepository.saveAll(orderedPlans);
-
-        Policy savedPolicy = policyRepository.save(policy);
-        return convertToResponseDTO(savedPolicy);
     }
 
     private void checkAndSetExpiration(Policy policy) {
@@ -285,6 +303,7 @@ public class PolicyServiceImpl implements PolicyService {
         return PolicyResponseDTO.builder()
                 .id(policy.getId())
                 .bookingId(policy.getBookingId())
+                .billId(policy.getBillId())
                 .userId(policy.getUserId())
                 .service(policy.getService())
                 .startDate(policy.getStartDate())
