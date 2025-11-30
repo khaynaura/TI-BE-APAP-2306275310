@@ -17,6 +17,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Date;
 
+/**
+ * Controller untuk menangani permintaan data Statistik dan Dashboard.
+ */
 @RestController
 @AllArgsConstructor
 @RequestMapping("/api/statistics")
@@ -24,25 +27,30 @@ public class StatisticsRestController {
 
     private final StatisticsService statisticsService;
 
-    // Helper untuk ambil ID User
+    /**
+     * Helper untuk mengambil ID user yang sedang login dari SecurityContext.
+     * Mendukung tipe Principal String (JWT) dan UserDetails (Testing).
+     *
+     * @return ID User (UUID) dalam bentuk String, atau null jika tidak terautentikasi.
+     */
     private String getCurrentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null) return null;
-        
+
         Object principal = auth.getPrincipal();
-        // Jika String (JWT Production)
         if (principal instanceof String) {
             return (String) principal;
-        } 
-        // Jika UserDetails (Unit Test @WithMockUser)
-        else if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
+        } else if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
             return ((org.springframework.security.core.userdetails.UserDetails) principal).getUsername();
         }
-        
         return principal.toString();
     }
 
-    // Helper untuk ambil Role Pertama
+    /**
+     * Helper untuk mengambil Role user yang sedang login.
+     *
+     * @return Role user (misal: ROLE_SUPERADMIN), atau null.
+     */
     private String getCurrentUserRole() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && !auth.getAuthorities().isEmpty()) {
@@ -51,19 +59,26 @@ public class StatisticsRestController {
         return null;
     }
 
-    // PBI-BE-I15: GET Insurance Statistics (Chart)
+    /**
+     * [PBI-BE-I15] Mengambil data statistik untuk grafik (Chart).
+     * Hanya dapat diakses oleh Superadmin dan Insurance Provider.
+     *
+     * @param timePeriod Periode waktu (bulan ke belakang).
+     * @param service    Filter jenis layanan.
+     * @return Data label dan value untuk grafik.
+     */
     @GetMapping("/chart")
     @PreAuthorize("hasAnyRole('SUPERADMIN', 'INSURANCE_PROVIDER')")
     public ResponseEntity<BaseResponseDTO<ChartDataResponseDTO>> getChartStatistics(
-            @RequestParam("period") int timePeriod, 
-            @RequestParam("service") String service 
+            @RequestParam("period") int timePeriod,
+            @RequestParam("service") String service
     ) {
         var response = new BaseResponseDTO<ChartDataResponseDTO>();
         try {
             // 1. Ambil Info User di Controller
             String userId = getCurrentUserId();
             String role = getCurrentUserRole();
-            
+
             String providerId = null;
 
             // 2. Tentukan apakah perlu filter Provider ID
@@ -72,9 +87,9 @@ public class StatisticsRestController {
             }
             // Kalau Superadmin, providerId tetap null (lihat semua)
 
-            // 3. Panggil Service (Service gak perlu cek SecurityContext lagi)
+            // 3. Panggil Service
             ChartDataResponseDTO data = statisticsService.getChartStatistics(timePeriod, service, providerId);
-            
+
             response.setStatus(HttpStatus.OK.value());
             response.setMessage("Chart data retrieved successfully.");
             response.setData(data);
@@ -88,18 +103,21 @@ public class StatisticsRestController {
             return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-    
-    // Summary Homepage
+
+    /**
+     * Mengambil ringkasan data (Dashboard Summary) untuk halaman Home.
+     * Dapat diakses oleh semua user yang sudah login (Authenticated).
+     *
+     * @return Data total Plan, Policy, dan Claim sesuai role user.
+     */
     @GetMapping("/summary")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BaseResponseDTO<HomeSummaryResponseDTO>> getHomeSummary() {
         var baseResponseDTO = new BaseResponseDTO<HomeSummaryResponseDTO>();
         try {
-            // 1. Ambil Info User di Controller
             String userId = getCurrentUserId();
             String role = getCurrentUserRole();
 
-            // 2. Lempar ID dan Role ke Service
             HomeSummaryResponseDTO summaryDTO = statisticsService.getHomeSummary(userId, role);
 
             baseResponseDTO.setStatus(HttpStatus.OK.value());

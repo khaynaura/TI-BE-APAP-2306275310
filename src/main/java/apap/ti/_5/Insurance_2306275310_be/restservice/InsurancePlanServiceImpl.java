@@ -7,31 +7,23 @@ import apap.ti._5.Insurance_2306275310_be.restdto.request.insuranceplan.CreateIn
 import apap.ti._5.Insurance_2306275310_be.restdto.request.insuranceplan.UpdateInsurancePlanRequestDTO;
 import apap.ti._5.Insurance_2306275310_be.restdto.response.insuranceplan.InsurancePlanResponseDTO;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Implementasi dari interface {@link InsurancePlanService}.
+ * Mengelola operasi CRUD untuk Insurance Plan, termasuk soft delete.
+ */
 @Service
 @Transactional
+@AllArgsConstructor
 public class InsurancePlanServiceImpl implements InsurancePlanService {
 
     private final InsurancePlanRepository insurancePlanRepository;
-    private final WebClient webClient;
-
-    @Value("${profile.service.url:http://localhost:8082/api}")
-    private String profileServiceUrl;
-
-    public InsurancePlanServiceImpl(InsurancePlanRepository insurancePlanRepository, 
-                                    WebClient.Builder webClientBuilder) {
-        this.insurancePlanRepository = insurancePlanRepository;
-        this.webClient = webClientBuilder.build();
-    }
 
     @Override
     public InsurancePlanResponseDTO createInsurancePlan(CreateInsurancePlanRequestDTO createDTO) {
@@ -57,7 +49,6 @@ public class InsurancePlanServiceImpl implements InsurancePlanService {
     public List<InsurancePlanResponseDTO> getAllPlans() {
         return insurancePlanRepository.findAllByDeletedAtIsNull().stream()
                 .sorted((p1, p2) -> {
-                    // Extract number from "INS1", "INS2", etc.
                     try {
                         int num1 = Integer.parseInt(p1.getId().substring(3));
                         int num2 = Integer.parseInt(p2.getId().substring(3));
@@ -96,12 +87,20 @@ public class InsurancePlanServiceImpl implements InsurancePlanService {
         plan.setCoverageDetails(updateDTO.getCoverageDetails());
         plan.setApplicableService(updateDTO.getApplicableService());
         plan.setExpiredByDays(updateDTO.getExpiredByDays());
-        // plan.setUpdatedAt(LocalDateTime.now()); // Otomatis via @PreUpdate
 
         InsurancePlan updatedPlan = insurancePlanRepository.save(plan);
         return convertToResponseDTO(updatedPlan);
     }
 
+    /**
+     * Melakukan soft delete pada Insurance Plan.
+     * <p>
+     * Validasi: Plan tidak dapat dihapus jika masih ada OrderedPlan aktif yang terkait.
+     *
+     * @param id ID dari Insurance Plan yang akan dihapus.
+     * @return Data Insurance Plan yang telah dihapus.
+     * @throws IllegalStateException Jika masih ada ordered plan yang belum expired.
+     */
     @Override
     public InsurancePlanResponseDTO softDeletePlan(String id) {
         InsurancePlan plan = insurancePlanRepository.findByIdAndDeletedAtIsNull(id)
@@ -118,8 +117,7 @@ public class InsurancePlanServiceImpl implements InsurancePlanService {
                 throw new IllegalStateException("Plan tidak dapat dihapus karena satu atau lebih Ordered Plan terkait belum expired.");
             }
         }
-        // Repository menggunakan @SQLDelete, jadi delete() akan memicu soft delete
-        insurancePlanRepository.delete(plan);
+        insurancePlanRepository.delete(plan); // Soft delete via @SQLDelete di Model
 
         return convertToResponseDTO(plan);
     }
@@ -153,9 +151,6 @@ public class InsurancePlanServiceImpl implements InsurancePlanService {
                 .collect(Collectors.toList());
     }
 
-   
-    // --- HELPER METHODS ---
-
     private InsurancePlanResponseDTO convertToResponseDTO(InsurancePlan plan) {
         return InsurancePlanResponseDTO.builder()
                 .id(plan.getId())
@@ -170,6 +165,4 @@ public class InsurancePlanServiceImpl implements InsurancePlanService {
                 .updatedAt(plan.getUpdatedAt())
                 .build();
     }
-
-
 }

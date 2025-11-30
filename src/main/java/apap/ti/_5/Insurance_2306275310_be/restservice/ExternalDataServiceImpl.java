@@ -15,12 +15,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Service khusus untuk mengambil data referensi (Dropdown) dari service eksternal.
+ */
 @Service
 public class ExternalDataServiceImpl {
 
     private final WebClient webClient;
 
-    // --- 1. INJECT SEMUA URL SERVICE ---
     @Value("${profile.service.url}")
     private String profileServiceUrl;
 
@@ -33,13 +35,13 @@ public class ExternalDataServiceImpl {
     @Value("${rental.service.url}")
     private String rentalServiceUrl;
 
-    // @Value("${package.service.url}")
-    // private String packageServiceUrl;
-
     public ExternalDataServiceImpl(WebClient.Builder webClientBuilder) {
         this.webClient = webClientBuilder.build();
     }
 
+    /**
+     * Mengambil daftar Insurance Provider dari Profile Service.
+     */
     public List<ProviderDTO> getAllProviders() {
         String url = profileServiceUrl + "/api/users/endusers?role=INSURANCE_PROVIDER";
         String token = getTokenFromRequest();
@@ -62,6 +64,9 @@ public class ExternalDataServiceImpl {
         return new ArrayList<>();
     }
 
+    /**
+     * Mengambil daftar Customer dari Profile Service.
+     */
     public List<OptionDTO> getAllCustomers() {
         String url = profileServiceUrl + "/api/users/endusers?role=CUSTOMER";
         String token = getTokenFromRequest();
@@ -83,38 +88,32 @@ public class ExternalDataServiceImpl {
         return new ArrayList<>();
     }
 
+    /**
+     * Mengambil daftar Booking ID dari service terkait (Accommodation, Flight, dll).
+     */
     public List<OptionDTO> getBookingsByService(ServiceEnum service) {
         String url = "";
-        
-        String jsonIdKey = "id"; 
+        String jsonIdKey = "id";
 
         switch (service) {
             case ACCOMMODATION:
-                url = accommodationServiceUrl + "/api/bookings"; 
-                jsonIdKey = "bookingID"; 
+                url = accommodationServiceUrl + "/bookings";
+                jsonIdKey = "bookingID";
                 break;
-                
             case FLIGHT:
-                url = flightServiceUrl + "/api/flight-bookings"; 
-                jsonIdKey = "id"; 
+                url = flightServiceUrl + "/api/flight-bookings";
+                jsonIdKey = "id";
                 break;
-                
             case RENTALS:
                 url = rentalServiceUrl + "/api/rental-bookings";
                 jsonIdKey = "id";
                 break;
-                
-            // case TOUR_PACKAGE:
-            //     url = packageServiceUrl + "/api/package-bookings";
-            //     jsonIdKey = "id";
-            //     break;
-                
             default:
                 return new ArrayList<>();
         }
 
         String token = getTokenFromRequest();
-        final String finalIdKey = jsonIdKey; 
+        final String finalIdKey = jsonIdKey;
 
         try {
             Map response = webClient.get().uri(url).header(HttpHeaders.AUTHORIZATION, token)
@@ -122,7 +121,7 @@ public class ExternalDataServiceImpl {
 
             if (response != null && response.get("data") != null) {
                 List<Map<String, Object>> dataList = (List<Map<String, Object>>) response.get("data");
-                
+
                 return dataList.stream().map(item -> {
                     String bookingId = String.valueOf(item.get(finalIdKey));
                     return new OptionDTO(bookingId, bookingId);

@@ -4,6 +4,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * DTO ringkas untuk informasi Provider Asuransi.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

@@ -4,10 +4,17 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * DTO sederhana untuk mengisi elemen Dropdown (Select Option) di Frontend.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class OptionDTO {
-    private String label; // Contoh: "Budi Santoso (budi01)" atau "BOOK-ACC-001"
-    private String value; // Contoh: "uuid-budi" atau "BOOK-ACC-001"
+    
+    /** Teks yang ditampilkan ke user (contoh: "Budi Santoso"). */
+    private String label;
+    
+    /** Nilai yang dikirim ke backend (contoh: UUID user). */
+    private String value;
 }

@@ -24,7 +24,7 @@ frontend:
 profile:
   service:
     url: ${PROFILE_SERVICE_URL:http://localhost:8082} 
-    
+
 accommodation:
   service:
     url: ${ACCOMMODATION_SERVICE_URL:http://localhost:8082}
@@ -42,5 +42,5 @@ billing:
     url: ${BILLING_SERVICE_URL:http://localhost:8085}
 
 insurance:
-  api-key: ${INSURANCE_API_KEY:super-secret-key-123}
+  api-key: ${INSURANCE_API_KEY:super-secret-key-123-insurance}
   

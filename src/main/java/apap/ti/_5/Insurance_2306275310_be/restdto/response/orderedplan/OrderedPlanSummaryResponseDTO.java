@@ -7,14 +7,21 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
+/**
+ * DTO ringkasan paket yang dibeli (untuk tampilan list di dalam detail Polis).
+ * Tidak memuat detail klaim, hanya jumlahnya saja.
+ */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class OrderedPlanSummaryResponseDTO {
-    private String id; 
+    
+    private String id;
     private String insurancePlanId;
     private String status;
     private LocalDate expiredDate;
+    
+    /** Jumlah klaim yang pernah diajukan. */
     private Integer claimsCount;
 }

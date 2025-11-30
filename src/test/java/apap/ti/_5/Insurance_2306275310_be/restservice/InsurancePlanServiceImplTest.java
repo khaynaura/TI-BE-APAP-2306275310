@@ -40,7 +40,7 @@ class InsurancePlanServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        insurancePlanService = new InsurancePlanServiceImpl(insurancePlanRepository, webClientBuilder);
+        insurancePlanService = new InsurancePlanServiceImpl(insurancePlanRepository);
     }
 
     // --- TEST: Create ---

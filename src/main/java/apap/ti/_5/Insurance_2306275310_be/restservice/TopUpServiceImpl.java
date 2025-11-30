@@ -24,6 +24,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Implementasi {@link TopUpService}.
+ * Menangani manajemen transaksi Top-Up dan integrasi penambahan saldo ke Profile Service.
+ */
 @Service
 @Transactional
 public class TopUpServiceImpl implements TopUpService {
@@ -70,22 +74,26 @@ public class TopUpServiceImpl implements TopUpService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment method not found"));
 
         if (!paymentMethod.getStatus().equalsIgnoreCase("Active")) {
-             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payment method is not active");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payment method is not active");
         }
 
         TopUpTransaction transaction = new TopUpTransaction();
         transaction.setEndUserId(request.getEndUserId());
         transaction.setAmount(request.getAmount());
         transaction.setPaymentMethod(paymentMethod);
-        transaction.setStatus("Pending"); 
+        transaction.setStatus("Pending");
 
         return topUpTransactionRepository.save(transaction);
     }
 
+    /**
+     * Memperbarui status transaksi top-up.
+     * Jika status berubah menjadi 'Success', otomatis melakukan update saldo ke Profile Service.
+     */
     @Override
     public TopUpTransaction updateStatusTopUp(UUID transactionId, UpdateStatusTopUpRequestDTO request) {
         TopUpTransaction transaction = getTransactionById(transactionId);
-        
+
         String oldStatus = transaction.getStatus();
         String newStatus = request.getStatus();
 
@@ -96,17 +104,16 @@ public class TopUpServiceImpl implements TopUpService {
         transaction.setStatus(newStatus);
         TopUpTransaction updatedTransaction = topUpTransactionRepository.save(transaction);
 
-
+        // Integrasi Profile Service jika Success
         if ("Success".equalsIgnoreCase(newStatus) && !"Success".equalsIgnoreCase(oldStatus)) {
             try {
-              
                 updateBalanceInProfileService(transaction.getEndUserId(), transaction.getAmount());
             } catch (Exception e) {
                 System.err.println("!!! CRITICAL ERROR: GAGAL UPDATE SALDO USER !!!");
                 System.err.println("User ID: " + transaction.getEndUserId());
                 System.err.println("Error: " + e.getMessage());
             }
-        } 
+        }
 
         return updatedTransaction;
     }
@@ -114,21 +121,24 @@ public class TopUpServiceImpl implements TopUpService {
     @Override
     public void deleteTopUpTransaction(UUID transactionId) {
         TopUpTransaction transaction = getTransactionById(transactionId);
-        transaction.setDeleted(true); // Soft Delete logic
+        transaction.setDeleted(true); // Soft Delete
         topUpTransactionRepository.save(transaction);
     }
 
+    /**
+     * Mengupdate saldo user di Profile Service menggunakan mekanisme Get-Calculate-Update.
+     */
     private void updateBalanceInProfileService(UUID userId, Long topUpAmount) {
-        String url = profileServiceUrl + "/api/users/" + userId; 
-
+        String url = profileServiceUrl + "/api/users/" + userId;
         String token = getTokenFromRequest();
 
+        // 1. Get Saldo Saat Ini
         ProfileResponseDTO currentProfile = webClient.get()
                 .uri(url)
                 .header(HttpHeaders.AUTHORIZATION, token)
                 .retrieve()
                 .bodyToMono(ProfileResponseDTO.class)
-                .block(); // Blocking sync
+                .block();
 
         if (currentProfile == null || currentProfile.getData() == null) {
             throw new RuntimeException("Gagal mengambil data user dari Profile Service (Response Null)");
@@ -137,21 +147,22 @@ public class TopUpServiceImpl implements TopUpService {
         BigDecimal currentSaldo = currentProfile.getData().getSaldo();
         if (currentSaldo == null) currentSaldo = BigDecimal.ZERO;
 
+        // 2. Hitung
         BigDecimal addAmount = BigDecimal.valueOf(topUpAmount);
         BigDecimal newSaldo = currentSaldo.add(addAmount);
 
+        // 3. Update
         Map<String, Object> payload = new HashMap<>();
-
-        payload.put("saldo", newSaldo); 
+        payload.put("saldo", newSaldo);
 
         webClient.put()
                 .uri(url)
                 .header(HttpHeaders.AUTHORIZATION, token)
                 .bodyValue(payload)
                 .retrieve()
-                .toBodilessEntity() 
+                .toBodilessEntity()
                 .block();
-        
+
         System.out.println(">>> SALDO UPDATED SUCCESS: " + currentSaldo + " + " + topUpAmount + " = " + newSaldo);
     }
 
@@ -160,6 +171,6 @@ public class TopUpServiceImpl implements TopUpService {
         if (attrs != null) {
             return attrs.getRequest().getHeader(HttpHeaders.AUTHORIZATION);
         }
-        return null; 
+        return null;
     }
 }

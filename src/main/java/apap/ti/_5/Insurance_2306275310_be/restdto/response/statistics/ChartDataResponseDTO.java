@@ -6,11 +6,18 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.util.List;
 
+/**
+ * DTO generik untuk mengirim data grafik (Chart.js / ApexCharts).
+ */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class ChartDataResponseDTO {
-    private List<String> labels; 
-    private List<Long> data;   
+    
+    /** Label sumbu X (misal: nama bulan, nama status). */
+    private List<String> labels;
+    
+    /** Nilai data sumbu Y (misal: jumlah klaim, total pendapatan). */
+    private List<Long> data;
 }
