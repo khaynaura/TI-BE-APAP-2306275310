@@ -14,6 +14,10 @@ spring:
     hibernate:
       ddl-auto: create-drop
 
+jwt:
+  secret: 1e36f06cf5d90fe6e948b0e5263644be
+  expiration: 86400000
+
 frontend:
   url: ${FRONTEND_URL:http://localhost:5173}
 
@@ -37,3 +41,4 @@ billing:
 
 insurance:
   api-key: ${INSURANCE_API_KEY:super-secret-key-123}
+  

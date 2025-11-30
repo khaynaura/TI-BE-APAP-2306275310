@@ -1,7 +1,6 @@
 package apap.ti._5.Insurance_2306275310_be.restcontroller;
 
-import apap.ti._5.Insurance_2306275310_be.restdto.response.orderedplan.OrderedPlanDetailResponseDTO;
-import apap.ti._5.Insurance_2306275310_be.restservice.OrderedPlanService;
+import apap.ti._5.Insurance_2306275310_be.restservice.PaymentMethodService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -9,21 +8,19 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(OrderedPlanRestController.class)
-class OrderedPlanRestControllerTest {
+@WebMvcTest(PaymentMethodRestController.class)
+class PaymentMethodRestControllerTest { // Nama class sudah benar
 
     @Autowired private MockMvc mockMvc;
-    @MockBean private OrderedPlanService orderedPlanService;
+    @MockBean private PaymentMethodService paymentMethodService;
 
     @Test
     @WithMockUser(roles = "CUSTOMER")
-    void testGetDetail() throws Exception {
-        when(orderedPlanService.getOrderedPlanDetailById("o1")).thenReturn(new OrderedPlanDetailResponseDTO());
-        mockMvc.perform(get("/api/ordered-plan/o1"))
+    void testGetAll() throws Exception {
+        mockMvc.perform(get("/api/payment-method/all"))
                 .andExpect(status().isOk());
     }
 }

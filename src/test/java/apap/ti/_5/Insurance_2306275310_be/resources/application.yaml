@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: insurance-be-test
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    driverClassName: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+jwt:
+  secret: 1e36f06cf5d90fe6e948b0e5263644be
+  expiration: 86400000
+
+# Nilai Dummy untuk Variabel Environment
+frontend:
+  url: http://localhost:5173
+
+profile:
+  service:
+    url: http://localhost:8082
+accommodation:
+  service:
+    url: http://localhost:8082
+flight:
+  service:
+    url: http://localhost:8083
+rental:
+  service:
+    url: http://localhost:8084
+billing:
+  service:
+    url: http://localhost:8085
+
+insurance:
+  api-key: super-secret-key-test

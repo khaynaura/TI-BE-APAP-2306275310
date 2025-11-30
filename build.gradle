@@ -48,6 +48,7 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	testImplementation 'org.hamcrest:hamcrest:2.2'
 	testImplementation 'com.h2database:h2' 
+	testImplementation 'org.springframework.security:spring-security-test'
 }
 
 tasks.named('test') {
