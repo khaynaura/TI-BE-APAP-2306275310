@@ -46,7 +46,6 @@ docker-push:
     - tk
 
 # --- STAGE 3: DEPLOY ---
-# --- STAGE 3: DEPLOY ---
 deploy:
   stage: deploy
   image: alpine:latest
@@ -62,22 +61,22 @@ deploy:
   script:
     # 1. Generate ConfigMap & Secret on-the-fly (Menggunakan Variabel CI/CD)
     - echo "Generating Kubernetes ConfigMap & Secret via printf..."
-    
-    # ConfigMap untuk INSURANCE (Tetap sama)
+    # ConfigMap untuk INSURANCE
     - |
       printf "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: insurance-2306275310-config\n  namespace: default\ndata:\n  DATABASE_URL_PROD: \"%s\"\n  DATABASE_USERNAME: \"%s\"\n" \
       "$DATABASE_URL_PROD" "$DATABASE_USERNAME" > configmap.yaml
-    
-    # Secret untuk INSURANCE (INI YANG DIUPDATE!)
-    # Kita tambahkan 5 URL Service baru ke dalam stringData
+    # Secret untuk INSURANCE
     - |
-      printf "apiVersion: v1\nkind: Secret\nmetadata:\n  name: insurance-2306275310-secret\n  namespace: default\ntype: Opaque\nstringData:\n  DATABASE_PASSWORD: \"%s\"\n  JWT_SECRET_KEY: \"%s\"\n  CORS_ALLOWED_ORIGINS: \"%s\"\n  PROFILE_SERVICE_URL: \"%s\"\n  FLIGHT_SERVICE_URL: \"%s\"\n  ACCOMMODATION_SERVICE_URL: \"%s\"\n  BILLING_SERVICE_URL: \"%s\"\n  RENTAL_SERVICE_URL: \"%s\"\n" \
-      "$DATABASE_PASSWORD" "$JWT_SECRET_KEY" "$CORS_ALLOWED_ORIGINS" "$PROFILE_SERVICE_URL" "$FLIGHT_SERVICE_URL" "$ACCOMMODATION_SERVICE_URL" "$BILLING_SERVICE_URL" "$RENTAL_SERVICE_URL" > secret.yaml
+      printf "apiVersion: v1\nkind: Secret\nmetadata:\n  name: insurance-2306275310-secret\n  namespace: default\ntype: Opaque\nstringData:\n  DATABASE_PASSWORD: \"%s\"\n  JWT_SECRET_KEY: \"%s\"\n  CORS_ALLOWED_ORIGINS: \"%s\"\n" \
+      "$DATABASE_PASSWORD" "$JWT_SECRET_KEY" "$CORS_ALLOWED_ORIGINS" > secret.yaml
 
     # 2. Update Tag Image di Deployment YAML
+    # Asumsi file k8s/deployment.yaml adalah file aslinya (sidating)
+    # File aslinya di history percakapan adalah 'insurance-k8s-deployment.yaml'
+    # Kita akan menggunakan file 'k8s/deployment.yaml' dan mencari teks 'REPLACE_ME_TAG'
     - sed "s|REPLACE_ME_TAG|$IMAGE_TAG|g" k8s/deployment.yaml > deployment.yaml
     
-    # 3. Copy file k8s ke server
+    # 3. Copy file k8s (Ingress, Service, Deployment, ConfigMap, Secret) ke server
     - echo "Creating -> deployment.yaml, configmap.yaml, secret.yaml, service.yaml, ingress.yaml"
     - ssh $EC2_USER@$EC2_HOST "mkdir -p ~/app/insurance-2306275310/k8s"
     - scp deployment.yaml configmap.yaml secret.yaml k8s/service.yaml k8s/ingress.yaml $EC2_USER@$EC2_HOST:~/app/insurance-2306275310/k8s/
@@ -85,12 +84,11 @@ deploy:
     # 4. Apply konfigurasi di K3S dan cek status rollout
     - |
       ssh $EC2_USER@$EC2_HOST "
-        # Apply semua file YAML di folder k8s (Secret akan ter-update dengan URL baru)
+        # Apply semua file YAML di folder k8s
         sudo k3s kubectl apply -f ~/app/insurance-2306275310/k8s/ &&
-        # Restart deployment agar environment variable baru terbaca
-        sudo k3s kubectl rollout restart deployment/insurance-2306275310-deployment -n default &&
         # Cek status rollout deployment insurance
         sudo k3s kubectl rollout status deployment/insurance-2306275310-deployment -n default
       "
   only:
+    # Ubah branch ini jika kamu menggunakan branch CI/CD yang berbeda
     - tk
