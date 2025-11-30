@@ -61,8 +61,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/external/customers").hasRole("SUPERADMIN")
    
                 .requestMatchers("/api/external/bookings").authenticated() 
+
+                .requestMatchers("/api/payment-method/all").hasAnyRole("CUSTOMER", "SUPERADMIN")
                 .requestMatchers("/api/payment-method/**").hasRole("SUPERADMIN")
-                .requestMatchers("/api/payment-method/all").hasAnyRole("SUPERADMIN", "CUSTOMER")
+
                 .requestMatchers(HttpMethod.GET, "/api/top-up/all").hasRole("SUPERADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/top-up/history/**").hasAnyRole("CUSTOMER", "SUPERADMIN")
 
