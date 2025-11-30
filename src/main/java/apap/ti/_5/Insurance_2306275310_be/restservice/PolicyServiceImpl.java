@@ -151,21 +151,29 @@ public class PolicyServiceImpl implements PolicyService {
         }
     }
 
-    // === PAY POLICY (WITH VERIFICATION) ===
     @Override
     public PolicyResponseDTO payPolicy(String policyId) {
         Policy policy = policyRepository.findById(policyId)
                 .orElseThrow(() -> new IllegalArgumentException("Policy not found"));
 
-        if ("EXPIRED".equalsIgnoreCase(policy.getStatus())) throw new IllegalStateException("Policy Expired");
-        if ("PAID".equalsIgnoreCase(policy.getStatus())) return convertToResponseDTO(policy);
+        // 1. Validasi Dasar
+        if ("EXPIRED".equalsIgnoreCase(policy.getStatus())) {
+            throw new IllegalStateException("Policy Expired");
+        }
+        if ("PAID".equalsIgnoreCase(policy.getStatus())) {
+            return convertToResponseDTO(policy);
+        }
 
-        // Verifikasi ke Billing Service (Optional, kalau token ada)
-        // Ini memenuhi PBI: "Memverifikasi status pembayaran"
-        try {
-            String token = getTokenFromRequest();
-            if (token != null) {
-                // Cek list bill customer
+        // 2. Cek Siapa yang Request? (User atau Callback)
+        String token = getTokenFromRequest();
+        boolean isUserRequest = (token != null);
+
+        // 3. JIKA USER YANG KLIK, WAJIB VERIFIKASI KETAT
+        if (isUserRequest) {
+            boolean isConfirmedPaid = false;
+
+            try {
+                // Nembak API Billing
                 List<BillResponseDTO> bills = webClient.get()
                         .uri(billingServiceUrl + "/api/bill/customer")
                         .header(HttpHeaders.AUTHORIZATION, token)
@@ -174,37 +182,45 @@ public class PolicyServiceImpl implements PolicyService {
                         .block();
 
                 if (bills != null) {
-                    // Cari bill yang sesuai policy ini
+                    // Cari Bill yang cocok
                     BillResponseDTO match = bills.stream()
                             .filter(b -> policyId.equals(b.getServiceReferenceId()))
                             .findFirst().orElse(null);
 
-                    // Kalau ketemu dan status UNPAID (0), lempar error (instruksi bayar)
-                    if (match != null && match.getStatus() == 0) {
-                        throw new IllegalStateException("Bill belum dibayar. Silakan selesaikan pembayaran di Billing Service.");
+                    // Syarat Lolos: Bill Ditemukan DAN Status == 1 (PAID)
+                    // Sesuaikan kode status temanmu: 1 = PAID, 2 = CANCELLED, 0 = UNPAID
+                    if (match != null && match.getStatus() == 1) {
+                        isConfirmedPaid = true;
                     }
                 }
+            } catch (Exception e) {
+                // Kalau Billing Service mati/error, anggap GAGAL (Jangan kasih gratisan)
+                System.err.println("Error verifikasi billing: " + e.getMessage());
             }
-        } catch (IllegalStateException e) {
-            throw e; // Teruskan pesan ke Controller
-        } catch (Exception e) {
-            System.err.println("Warning: Verifikasi billing gagal, lanjut update via callback mechanism.");
+
+            // KUNCI PENGAMAN: Kalau tidak terkonfirmasi lunas, TOLAK.
+            if (!isConfirmedPaid) {
+                throw new IllegalStateException("Verifikasi Gagal: Tagihan belum lunas di sistem Billing atau data tidak ditemukan.");
+            }
         }
 
-        // Update Status
+        // 4. UPDATE STATUS (Hanya sampai sini jika Callback System ATAU User sudah terverifikasi Lunas)
         policy.setStatus("PAID");
         policy.setUpdatedAt(LocalDateTime.now());
 
         List<OrderedPlan> orderedPlans = policy.getOrderedPlans();
-        for (OrderedPlan op : orderedPlans) {
-            op.setStatus("PAID");
-            op.setUpdatedAt(LocalDateTime.now());
+        if (orderedPlans != null) {
+            for (OrderedPlan op : orderedPlans) {
+                op.setStatus("PAID");
+                op.setUpdatedAt(LocalDateTime.now());
+            }
+            orderedPlanRepository.saveAll(orderedPlans);
         }
-        orderedPlanRepository.saveAll(orderedPlans);
 
         Policy savedPolicy = policyRepository.save(policy);
         return convertToResponseDTO(savedPolicy);
     }
+
     /**
      * Memvalidasi keberadaan Booking ID.
      * KHUSUS TOUR_PACKAGE DI-SKIP (AUTO PASS).
