@@ -46,7 +46,7 @@ public class PolicyServiceImpl implements PolicyService {
 
     @Value("${rental.service.url}")
     private String rentalServiceUrl;
-    
+
     @Value("${billing.api-key}")
     private String billingApiKey;
 
@@ -128,7 +128,7 @@ public class PolicyServiceImpl implements PolicyService {
             // Kita pakai API Key karena ini komunikasi antar Service
             
             webClient.post()
-                    .uri(billingServiceUrl + "/bill/create")
+                    .uri(billingServiceUrl + "/api/bill/create")
                     // [UBAH HEADER] Pakai X-API-KEY (atau nama header yg disepakati)
                     .header("X-API-KEY", billingApiKey) 
                     .bodyValue(billPayload)
@@ -160,7 +160,7 @@ public class PolicyServiceImpl implements PolicyService {
             if (token != null) {
                 // Cek list bill customer
                 List<BillResponseDTO> bills = webClient.get()
-                        .uri(billingServiceUrl + "/bill/customer")
+                        .uri(billingServiceUrl + "/api/bill/customer")
                         .header(HttpHeaders.AUTHORIZATION, token)
                         .retrieve()
                         .bodyToMono(new ParameterizedTypeReference<List<BillResponseDTO>>() {})
