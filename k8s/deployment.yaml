@@ -15,11 +15,11 @@ spec:
     spec:
       containers:
         - name: springboot-container
-          # PASTIKAN INI DIGANTI DENGAN IMAGE DOCKER HUB KAMU
-          image: khaylanaura/insurance-be:REPLACE_ME_TAG 
+          image: khaylanaura/insurance-be:latest # Pastikan tag image benar
           ports:
             - containerPort: 8080
           env:
+            # --- DATABASE CONFIG (Biasanya dari ConfigMap) ---
             - name: DATABASE_URL_PROD
               valueFrom:
                 configMapKeyRef:
@@ -30,7 +30,8 @@ spec:
                 configMapKeyRef:
                   name: insurance-2306275310-config
                   key: DATABASE_USERNAME
-            # --- KONFIGURASI RAHASIA (DIAMBIL DARI SECRET) ---
+            
+            # --- SECRETS & SENSITIVE DATA (Dari Secret) ---
             - name: DATABASE_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -46,3 +47,34 @@ spec:
                 secretKeyRef:
                   name: insurance-2306275310-secret
                   key: CORS_ALLOWED_ORIGINS
+
+            # --- EXTERNAL SERVICE URLs (Dari CI/CD Variables -> Secret) ---
+            - name: PROFILE_SERVICE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: insurance-2306275310-secret
+                  key: PROFILE_SERVICE_URL
+            
+            - name: FLIGHT_SERVICE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: insurance-2306275310-secret
+                  key: FLIGHT_SERVICE_URL
+            
+            - name: ACCOMMODATION_SERVICE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: insurance-2306275310-secret
+                  key: ACCOMMODATION_SERVICE_URL
+            
+            - name: BILLING_SERVICE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: insurance-2306275310-secret
+                  key: BILLING_SERVICE_URL
+            
+            - name: RENTAL_SERVICE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: insurance-2306275310-secret
+                  key: RENTAL_SERVICE_URL

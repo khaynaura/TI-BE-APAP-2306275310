@@ -24,6 +24,7 @@ frontend:
 profile:
   service:
     url: ${PROFILE_SERVICE_URL:http://localhost:8082} 
+    
 accommodation:
   service:
     url: ${ACCOMMODATION_SERVICE_URL:http://localhost:8082}
