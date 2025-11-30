@@ -22,23 +22,23 @@ spec:
           env:
             # 1. PROFILE (Wajib HTTPS & pakai /api karena codingan filter butuh base api)
             - name: PROFILE_SERVICE_URL
-              value: "https://2306223206-be.hafizmuh.site"
+              value: "http://2306223206-be.hafizmuh.site"
 
             # 2. ACCOMMODATION (Wajib HTTPS, Tanpa /api)
             - name: ACCOMMODATION_SERVICE_URL
-              value: "https://2306223206-be.hafizmuh.site"
+              value: "http://2306223206-be.hafizmuh.site"
 
             # 3. BILLING (Wajib HTTPS, Tanpa /api)
             - name: BILLING_SERVICE_URL
-              value: "https://2306208426-be.hafizmuh.site"
+              value: "http://2306208426-be.hafizmuh.site"
 
             # 4. FLIGHT (Wajib HTTPS, Tanpa /api)
             - name: FLIGHT_SERVICE_URL
-              value: "https://2306209681-be.hafizmuh.site"
+              value: "http://2306209681-be.hafizmuh.site"
 
             # 5. RENTAL (Wajib HTTPS, Tanpa /api)
             - name: RENTAL_SERVICE_URL
-              value: "https://2306208426-be.hafizmuh.site"
+              value: "http://2306208426-be.hafizmuh.site"
 
             # --- Konfigurasi Database & Secret Tetap Ada Di Bawah ---
             - name: DATABASE_URL_PROD
