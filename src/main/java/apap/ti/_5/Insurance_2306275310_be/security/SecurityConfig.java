@@ -50,6 +50,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/claim/submit/**").hasAnyRole("CUSTOMER", "SUPERADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/policy/create").hasAnyRole("CUSTOMER", "SUPERADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/policy/**").hasAnyRole("CUSTOMER", "SUPERADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/policy/**").hasAnyRole("CUSTOMER", "SUPERADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/ordered-plan/**").hasAnyRole("CUSTOMER", "SUPERADMIN")
 
 
