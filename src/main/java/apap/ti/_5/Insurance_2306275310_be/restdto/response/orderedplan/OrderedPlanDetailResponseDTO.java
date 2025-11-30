@@ -18,6 +18,7 @@ public class OrderedPlanDetailResponseDTO {
     private String id; 
     private String insurancePlanId;
     private String status;
+    private String customerId;
     private LocalDate expiredDate;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

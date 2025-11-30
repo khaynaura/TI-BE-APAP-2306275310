@@ -10,100 +10,167 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print; // BUAT DEBUG
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(ClaimRestController.class)
-@AutoConfigureMockMvc(addFilters = false)
-class ClaimRestControllerTest {
+@SpringBootTest(properties = { "profile.service.url=http://localhost:8081/api" })
+@AutoConfigureMockMvc
+public class ClaimRestControllerTest {
 
     @Autowired private MockMvc mockMvc;
     @MockBean private ClaimService claimService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    @Autowired private ObjectMapper objectMapper;
 
-    private SecurityContext securityContext;
-    private Authentication authentication;
+    private ClaimSummaryResponseDTO summaryDTO;
+    private ClaimDetailResponseDTO detailDTO;
+    private CreateClaimRequestDTO createDTO;
+    private ProcessClaimRequestDTO processDTO;
 
     @BeforeEach
     void setUp() {
-        securityContext = mock(SecurityContext.class);
-        authentication = mock(Authentication.class);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        SecurityContextHolder.setContext(securityContext);
-    }
-
-    private void setupMockUser(String userId, String role) {
-        when(authentication.getPrincipal()).thenReturn(userId);
-        when(authentication.getAuthorities()).thenReturn((List) Collections.singletonList(new SimpleGrantedAuthority(role)));
+        summaryDTO = ClaimSummaryResponseDTO.builder().id("CLM1").build();
+        detailDTO = ClaimDetailResponseDTO.builder().id("CLM1").build();
+        createDTO = new CreateClaimRequestDTO("Proof");
+        processDTO = ProcessClaimRequestDTO.builder().isAccepted(true).build();
     }
 
     @Test
-    void testSubmitClaim_Success() throws Exception {
-        setupMockUser("cust-1", "ROLE_CUSTOMER");
-
-        CreateClaimRequestDTO req = new CreateClaimRequestDTO();
-        // === ISI DATA DUMMY BIAR LOLOS VALIDASI ===
-        // Kalau nama field beda, sesuaikan manual ya!
-        try { req.getClass().getMethod("setClaimAmount", Double.class).invoke(req, 100000.0); } catch (Exception e) {}
-        try { req.getClass().getMethod("setDescription", String.class).invoke(req, "Kecelakaan"); } catch (Exception e) {}
-        try { req.getClass().getMethod("setBankName", String.class).invoke(req, "BCA"); } catch (Exception e) {}
-        try { req.getClass().getMethod("setAccountNumber", String.class).invoke(req, "123456"); } catch (Exception e) {}
-
-        when(claimService.createClaim(anyString(), any())).thenReturn(new ClaimDetailResponseDTO());
-
-        mockMvc.perform(post("/api/claim/submit/plan-1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
-                .andDo(print()) // INI BAKAL NAMPILIN ERROR DI CONSOLE KALAU GAGAL
-                .andExpect(status().isCreated());
-    }
-
-    @Test
-    void testProcessClaim_Success() throws Exception {
-        setupMockUser("admin", "ROLE_SUPERADMIN");
-
-        ProcessClaimRequestDTO req = new ProcessClaimRequestDTO();
-        try { req.getClass().getMethod("setStatus", String.class).invoke(req, "APPROVED"); } catch (Exception e) {}
-
-        when(claimService.processClaim(anyString(), any())).thenReturn(new ClaimDetailResponseDTO());
-
-        mockMvc.perform(put("/api/claim/process/c1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
-                .andDo(print())
-                .andExpect(status().isOk());
-    }
-
-    // TEST LAIN YANG SUDAH PASS (GET) - COPY PASTE AJA BIAR FILE LENGKAP
-    @Test
-    void testGetAllClaimsFiltered_Success() throws Exception {
-        setupMockUser("admin", "ROLE_SUPERADMIN");
-        when(claimService.getAllClaimsFiltered(any(), any())).thenReturn(List.of(new ClaimSummaryResponseDTO()));
+    @WithMockUser(roles = "SUPERADMIN")
+    void testGetAll_Success() throws Exception {
+        when(claimService.getAllClaimsFiltered(any(), any())).thenReturn(List.of(summaryDTO));
         mockMvc.perform(get("/api/claim")).andExpect(status().isOk());
     }
+    
+    @Test
+    @WithMockUser(roles = "SUPERADMIN")
+    void testGetAll_Error() throws Exception {
+        when(claimService.getAllClaimsFiltered(any(), any())).thenThrow(new RuntimeException("Error"));
+        mockMvc.perform(get("/api/claim")).andExpect(status().isInternalServerError());
+    }
 
     @Test
-    void testGetClaimById_Success_Owner() throws Exception {
-        String userId = "cust-1";
-        setupMockUser(userId, "ROLE_CUSTOMER");
-        when(claimService.getClaimById("c1")).thenReturn(new ClaimDetailResponseDTO());
-        when(claimService.isClaimOwner("c1", userId)).thenReturn(true);
-        mockMvc.perform(get("/api/claim/c1")).andExpect(status().isOk());
+    @WithMockUser(username = "budi", roles = "CUSTOMER")
+    void testGetDetail_Success() throws Exception {
+        when(claimService.getClaimById("CLM1")).thenReturn(detailDTO);
+        when(claimService.isClaimOwner("CLM1", "budi")).thenReturn(true);
+        mockMvc.perform(get("/api/claim/CLM1")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "budi", roles = "CUSTOMER")
+    void testGetDetail_Forbidden() throws Exception {
+        when(claimService.getClaimById("CLM1")).thenReturn(detailDTO);
+        when(claimService.isClaimOwner("CLM1", "budi")).thenReturn(false); // Not owner
+        mockMvc.perform(get("/api/claim/CLM1")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "SUPERADMIN")
+    void testGetDetail_NotFound() throws Exception {
+        when(claimService.getClaimById("CLM99")).thenThrow(new IllegalArgumentException("Not found"));
+        mockMvc.perform(get("/api/claim/CLM99")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "CUSTOMER")
+    void testSubmit_Success() throws Exception {
+        when(claimService.createClaim(eq("OP1"), any())).thenReturn(detailDTO);
+        mockMvc.perform(post("/api/claim/submit/OP1").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createDTO)))
+                .andExpect(status().isCreated());
+    }
+    
+    @Test
+    @WithMockUser(roles = "CUSTOMER")
+    void testSubmit_ValidationError() throws Exception {
+        CreateClaimRequestDTO invalid = new CreateClaimRequestDTO(""); // Proof empty
+        mockMvc.perform(post("/api/claim/submit/OP1").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(invalid)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(roles = "INSURANCE_PROVIDER")
+    void testProcess_Success() throws Exception {
+        when(claimService.processClaim(eq("CLM1"), any())).thenReturn(detailDTO);
+        mockMvc.perform(put("/api/claim/process/CLM1").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(processDTO)))
+                .andExpect(status().isOk());
+    }
+    
+    @Test
+    @WithMockUser(roles = "INSURANCE_PROVIDER")
+    void testProcess_Error() throws Exception {
+        when(claimService.processClaim(any(), any())).thenThrow(new RuntimeException("Fail"));
+        mockMvc.perform(put("/api/claim/process/CLM1").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(processDTO)))
+                .andExpect(status().isInternalServerError());
+    }
+
+    // 1. Test Create Claim Validation Error (Menghijaukan blok bindingResult.hasErrors)
+    @Test
+    @WithMockUser(roles = "CUSTOMER")
+    void testSubmitClaim_ValidationError() throws Exception {
+        // Buat DTO yang tidak valid (misal proof kosong kalau ada validasi @NotBlank)
+        CreateClaimRequestDTO invalidDto = new CreateClaimRequestDTO(""); 
+        
+        mockMvc.perform(post("/api/claim/submit/OP1").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(invalidDto)))
+                .andExpect(status().isBadRequest()); // Harus 400 Bad Request
+    }
+
+    // 2. Test Create Claim Server Error (Menghijaukan blok catch Exception)
+    @Test
+    @WithMockUser(roles = "CUSTOMER")
+    void testSubmitClaim_ServerError() throws Exception {
+        // Simulasi service error
+        when(claimService.createClaim(any(), any())).thenThrow(new RuntimeException("DB Down"));
+        
+        mockMvc.perform(post("/api/claim/submit/OP1").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createDTO))) // Pakai DTO valid
+                .andExpect(status().isInternalServerError()); // Harus 500 Internal Server Error
+    }
+
+    // 3. Test Process Claim Validation Error (Menghijaukan blok bindingResult.hasErrors)
+    @Test
+    @WithMockUser(roles = "INSURANCE_PROVIDER")
+    void testProcessClaim_ValidationError() throws Exception {
+        // DTO Invalid (misal null)
+        ProcessClaimRequestDTO invalidProcessDto = new ProcessClaimRequestDTO(); 
+        
+        mockMvc.perform(put("/api/claim/process/CLM1").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(invalidProcessDto)))
+                .andExpect(status().isBadRequest());
+    }
+
+    // 4. Test Process Claim Server Error (Menghijaukan blok catch Exception)
+    @Test
+    @WithMockUser(roles = "INSURANCE_PROVIDER")
+    void testProcessClaim_ServerError() throws Exception {
+        when(claimService.processClaim(any(), any())).thenThrow(new RuntimeException("DB Error"));
+
+        mockMvc.perform(put("/api/claim/process/CLM1").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(processDTO)))
+                .andExpect(status().isInternalServerError());
     }
 }

@@ -31,7 +31,19 @@ public class ClaimRestController {
     
     private String getCurrentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return (auth != null) ? (String) auth.getPrincipal() : null;
+        if (auth == null) return null;
+        
+        Object principal = auth.getPrincipal();
+        // Jika String (JWT Production)
+        if (principal instanceof String) {
+            return (String) principal;
+        } 
+        // Jika UserDetails (Unit Test @WithMockUser)
+        else if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
+            return ((org.springframework.security.core.userdetails.UserDetails) principal).getUsername();
+        }
+        
+        return principal.toString();
     }
 
     private boolean isCustomer() {

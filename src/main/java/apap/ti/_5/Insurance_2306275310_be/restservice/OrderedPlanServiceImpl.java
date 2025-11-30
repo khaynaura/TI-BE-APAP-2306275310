@@ -41,6 +41,7 @@ public class OrderedPlanServiceImpl implements OrderedPlanService {
                 .id(plan.getId())
                 .insurancePlanId(plan.getInsurancePlan().getId())
                 .status(plan.getStatus())
+                .customerId(plan.getPolicy().getUserId()) 
                 .expiredDate(plan.getExpiredDate())
                 .createdAt(plan.getCreatedAt())
                 .updatedAt(plan.getUpdatedAt())

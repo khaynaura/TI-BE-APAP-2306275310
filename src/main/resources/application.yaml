@@ -35,6 +35,7 @@ flight:
 rental:
   service:
     url: ${RENTAL_SERVICE_URL:http://localhost:8084} 
+    
 billing:
   service:
     url: ${BILLING_SERVICE_URL:http://localhost:8085}

@@ -48,8 +48,8 @@ public class PolicyServiceImpl implements PolicyService {
     @Value("${rental.service.url}")
     private String rentalServiceUrl;
 
-    @Value("${package.service.url}")
-    private String packageServiceUrl;
+    // @Value("${package.service.url}")
+    // private String packageServiceUrl;
 
     @Value("${insurance.api-key:super-secret-key-123}") 
     private String apiKey;
@@ -130,9 +130,9 @@ public class PolicyServiceImpl implements PolicyService {
             case "RENTAL": case "Rentals":
                 targetUrl = rentalServiceUrl + "/api/rental-booking/" + bookingId;
                 break;
-            case "PACKAGE": case "Tour Package":
-                targetUrl = packageServiceUrl + "/api/package-booking/" + bookingId;
-                break;
+            // case "PACKAGE": case "Tour Package":
+            //     targetUrl = packageServiceUrl + "/api/package-booking/" + bookingId;
+            //     break;
             default:
                 return; 
         }

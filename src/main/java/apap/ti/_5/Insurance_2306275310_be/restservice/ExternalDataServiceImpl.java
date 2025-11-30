@@ -33,8 +33,8 @@ public class ExternalDataServiceImpl {
     @Value("${rental.service.url}")
     private String rentalServiceUrl;
 
-    @Value("${package.service.url}")
-    private String packageServiceUrl;
+    // @Value("${package.service.url}")
+    // private String packageServiceUrl;
 
     public ExternalDataServiceImpl(WebClient.Builder webClientBuilder) {
         this.webClient = webClientBuilder.build();
@@ -104,10 +104,10 @@ public class ExternalDataServiceImpl {
                 jsonIdKey = "id";
                 break;
                 
-            case TOUR_PACKAGE:
-                url = packageServiceUrl + "/api/package-bookings";
-                jsonIdKey = "id";
-                break;
+            // case TOUR_PACKAGE:
+            //     url = packageServiceUrl + "/api/package-bookings";
+            //     jsonIdKey = "id";
+            //     break;
                 
             default:
                 return new ArrayList<>();
