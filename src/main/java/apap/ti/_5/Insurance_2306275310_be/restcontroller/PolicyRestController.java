@@ -19,6 +19,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Controller untuk mengelola Policy.
+ */
 @RestController
 @AllArgsConstructor
 @RequestMapping("/api/policy")
@@ -26,6 +29,9 @@ public class PolicyRestController {
 
     private final PolicyService policyService;
 
+    /**
+     * Mendapatkan ID user yang sedang login.
+     */
     private String getCurrentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null) return null;
@@ -42,6 +48,10 @@ public class PolicyRestController {
         
         return principal.toString();
     }
+
+    /**
+     * Mengecek apakah user adalah Superadmin.
+     */
     private boolean isSuperAdmin() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return auth != null && auth.getAuthorities().stream()
@@ -50,7 +60,9 @@ public class PolicyRestController {
 
     // --- Endpoints ---
 
-    // PBI-BE-I9: Create Policy (Integrasi Service Lain + Billing)
+    /**
+     * Create Policy (Integrasi Service Lain + Billing).
+     */
     @PostMapping("/create")
     @PreAuthorize("hasAnyRole('CUSTOMER', 'SUPERADMIN')")
     public ResponseEntity<BaseResponseDTO<PolicyResponseDTO>> createPolicy(
@@ -101,7 +113,9 @@ public class PolicyRestController {
         }
     }
 
-    // PBI-BE-I10: Get All Policies
+    /**
+     * Get All Policies.
+     */
     @GetMapping
     @PreAuthorize("hasAnyRole('CUSTOMER', 'SUPERADMIN')")
     public ResponseEntity<BaseResponseDTO<List<PolicyResponseDTO>>> getAllPolicies() {
@@ -109,10 +123,8 @@ public class PolicyRestController {
         try {
             List<PolicyResponseDTO> data;
             if (isSuperAdmin()) {
-                // Superadmin lihat semua
                 data = policyService.getAllPolicies();
             } else {
-                // Customer lihat punya sendiri
                 data = policyService.getPoliciesByUserId(getCurrentUserId());
             }
 
@@ -129,7 +141,9 @@ public class PolicyRestController {
         }
     }
 
-    // PBI-BE-I11: Get Policy Detail
+    /**
+     * Get Policy Detail.
+     */
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('CUSTOMER', 'SUPERADMIN')")
     public ResponseEntity<BaseResponseDTO<PolicyResponseDTO>> getPolicyById(@PathVariable("id") String id) {
@@ -137,7 +151,6 @@ public class PolicyRestController {
         try {
             PolicyResponseDTO data = policyService.getPolicyById(id);
             
-            // [VALIDASI KEPEMILIKAN]
             if (!isSuperAdmin() && !data.getUserId().equals(getCurrentUserId())) {
                 response.setStatus(HttpStatus.FORBIDDEN.value());
                 response.setMessage("Anda tidak memiliki akses ke Policy ini.");
@@ -158,12 +171,13 @@ public class PolicyRestController {
         }
     }
     
+    /**
+     * Menerima notifikasi pembayaran.
+     */
     @PostMapping("/notify-payment")
     public ResponseEntity<BaseResponseDTO<Object>> receivePaymentNotification(@RequestBody Map<String, Object> payload) {
         var response = new BaseResponseDTO<>();
         try {
-            // [FIX] Sesuaikan Key dengan apa yang dikirim Billing Service
-            // Biasanya mereka membalikan "serviceReferenceId" yang kita kirim di awal
             String policyId = (String) payload.get("serviceReferenceId"); 
             
             // Fallback: Kalau null, coba cek key "refId" (siapa tau dokumentasi billing beda)

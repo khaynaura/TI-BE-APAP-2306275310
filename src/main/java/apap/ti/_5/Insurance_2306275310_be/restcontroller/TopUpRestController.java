@@ -51,7 +51,7 @@ public class TopUpRestController {
     }
 
     /**
-     * [PBI-BE-TU1] Mengambil semua transaksi top-up.
+     * Mengambil semua transaksi top-up.
      * Hanya untuk Superadmin.
      */
     @GetMapping("/all")
@@ -61,7 +61,7 @@ public class TopUpRestController {
     }
 
     /**
-     * [PBI-BE-TU1] Mengambil riwayat top-up milik user tertentu.
+     * Mengambil riwayat top-up milik user tertentu.
      * Customer hanya boleh melihat miliknya sendiri. Superadmin boleh melihat punya siapa saja.
      *
      * @param userId ID User yang ingin dilihat riwayatnya.
@@ -81,7 +81,7 @@ public class TopUpRestController {
     }
 
     /**
-     * [PBI-BE-TU2] Mengambil detail transaksi berdasarkan ID.
+     *Mengambil detail transaksi berdasarkan ID.
      * Hanya untuk Superadmin.
      */
     @GetMapping("/{id}")
@@ -91,7 +91,7 @@ public class TopUpRestController {
     }
 
     /**
-     * [PBI-BE-TU3] Membuat pengajuan top-up baru.
+     * Membuat pengajuan top-up baru.
      * Hanya untuk Customer. ID User diambil otomatis dari token.
      */
     @PostMapping("/create")
@@ -105,7 +105,7 @@ public class TopUpRestController {
     }
 
     /**
-     * [PBI-BE-TU4] Memperbarui status transaksi (Approve/Reject).
+     * Memperbarui status transaksi (Approve/Reject).
      * Hanya untuk Superadmin.
      */
     @PutMapping("/{id}/status")
@@ -118,7 +118,7 @@ public class TopUpRestController {
     }
 
     /**
-     * [PBI-BE-TU5] Menghapus transaksi top-up (Soft Delete).
+     * Menghapus transaksi top-up (Soft Delete).
      * Hanya untuk Superadmin.
      */
     @DeleteMapping("/{id}")

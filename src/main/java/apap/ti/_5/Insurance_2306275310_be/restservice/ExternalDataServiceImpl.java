@@ -15,9 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * Service khusus untuk mengambil data referensi (Dropdown) dari service eksternal.
- */
 @Service
 public class ExternalDataServiceImpl {
 
@@ -39,61 +36,58 @@ public class ExternalDataServiceImpl {
         this.webClient = webClientBuilder.build();
     }
 
-    /**
-     * Mengambil daftar Insurance Provider dari Profile Service.
-     */
+    // ... (getAllProviders dan getAllCustomers SAMA SEPERTI SEBELUMNYA, TIDAK DIUBAH) ...
     public List<ProviderDTO> getAllProviders() {
         String url = profileServiceUrl + "/api/users/endusers?role=INSURANCE_PROVIDER";
         String token = getTokenFromRequest();
-
         try {
             Map response = webClient.get().uri(url).header(HttpHeaders.AUTHORIZATION, token)
                     .retrieve().bodyToMono(Map.class).block();
-
             if (response != null && response.get("data") != null) {
                 List<Map<String, Object>> dataList = (List<Map<String, Object>>) response.get("data");
                 return dataList.stream().map(item -> new ProviderDTO(
-                        (String) item.get("id"),
-                        (String) item.get("name"),
-                        (String) item.get("username")
+                        (String) item.get("id"), (String) item.get("name"), (String) item.get("username")
                 )).collect(Collectors.toList());
             }
-        } catch (Exception e) {
-            System.err.println("Gagal fetch providers: " + e.getMessage());
-        }
+        } catch (Exception e) { System.err.println("Gagal fetch providers: " + e.getMessage()); }
         return new ArrayList<>();
     }
 
-    /**
-     * Mengambil daftar Customer dari Profile Service.
-     */
     public List<OptionDTO> getAllCustomers() {
         String url = profileServiceUrl + "/api/users/endusers?role=CUSTOMER";
         String token = getTokenFromRequest();
-
         try {
             Map response = webClient.get().uri(url).header(HttpHeaders.AUTHORIZATION, token)
                     .retrieve().bodyToMono(Map.class).block();
-
             if (response != null && response.get("data") != null) {
                 List<Map<String, Object>> dataList = (List<Map<String, Object>>) response.get("data");
                 return dataList.stream().map(item -> new OptionDTO(
-                        item.get("name") + " (" + item.get("username") + ")",
-                        (String) item.get("id")
+                        item.get("name") + " (" + item.get("username") + ")", (String) item.get("id")
                 )).collect(Collectors.toList());
             }
-        } catch (Exception e) {
-            System.err.println("Gagal fetch customers: " + e.getMessage());
-        }
+        } catch (Exception e) { System.err.println("Gagal fetch customers: " + e.getMessage()); }
         return new ArrayList<>();
     }
 
     /**
-     * Mengambil daftar Booking ID dari service terkait (Accommodation, Flight, dll).
+     * Mengambil daftar Booking ID.
+     * KHUSUS TOUR_PACKAGE KITA KASIH DATA DUMMY (MOCK).
      */
     public List<OptionDTO> getBookingsByService(ServiceEnum service) {
         String url = "";
         String jsonIdKey = "id";
+
+        // --- BYPASS LOGIC START ---
+        if (service == ServiceEnum.TOUR_PACKAGE) {
+            // Langsung return list dummy biar Frontend seneng
+            List<OptionDTO> mockBookings = new ArrayList<>();
+            mockBookings.add(new OptionDTO("BOOK-TOUR-001", "BOOK-TOUR-001"));
+            mockBookings.add(new OptionDTO("BOOK-TOUR-002", "BOOK-TOUR-002"));
+            mockBookings.add(new OptionDTO("BOOK-TOUR-003", "BOOK-TOUR-003"));
+            mockBookings.add(new OptionDTO("BOOK-TOUR-DUMMY", "BOOK-TOUR-DUMMY"));
+            return mockBookings;
+        }
+        // --- BYPASS LOGIC END ---
 
         switch (service) {
             case ACCOMMODATION:

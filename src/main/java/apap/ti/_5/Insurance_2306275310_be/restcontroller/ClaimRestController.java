@@ -20,6 +20,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * Controller untuk menangani permintaan terkait Klaim (Claim).
+ */
 @RestController
 @AllArgsConstructor
 @RequestMapping("/api/claim")
@@ -27,7 +30,9 @@ public class ClaimRestController {
 
     private final ClaimService claimService;
 
-    
+    /**
+     * Mendapatkan ID user yang sedang login saat ini.
+     */
     private String getCurrentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null) return null;
@@ -45,6 +50,9 @@ public class ClaimRestController {
         return principal.toString();
     }
 
+    /**
+     * Mengecek apakah user yang login memiliki role CUSTOMER.
+     */
     private boolean isCustomer() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return auth != null && auth.getAuthorities().stream()
@@ -53,7 +61,10 @@ public class ClaimRestController {
 
     // --- ENDPOINTS ---
 
-    // PBI-BE-I7: GET All Claims (Hanya untuk Admin & Provider)
+    /**
+     * GET All Claims (Hanya untuk Admin & Provider).
+     * Mengambil daftar klaim dengan opsi filter status dan planId.
+     */
     @GetMapping
     @PreAuthorize("hasAnyRole('SUPERADMIN', 'INSURANCE_PROVIDER')")
     public ResponseEntity<BaseResponseDTO<List<ClaimSummaryResponseDTO>>> getAllClaimsFiltered(
@@ -76,7 +87,10 @@ public class ClaimRestController {
         }
     }
 
-    // GET Detail Claim (Admin, Provider, Customer Pemilik)
+    /**
+     * GET Detail Claim (Admin, Provider, Customer Pemilik).
+     * Mengambil detail klaim berdasarkan ID.
+     */
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('SUPERADMIN', 'INSURANCE_PROVIDER', 'CUSTOMER')")
     public ResponseEntity<BaseResponseDTO<ClaimDetailResponseDTO>> getClaimById(@PathVariable("id") String id) {
@@ -90,7 +104,6 @@ public class ClaimRestController {
             if (isCustomer()) {
                 String currentUserId = getCurrentUserId();
                 
-                // Pastikan method isClaimOwner sudah ada di ClaimService interface & impl!
                 boolean isOwner = claimService.isClaimOwner(id, currentUserId); 
                 
                 if (!isOwner) {
@@ -115,7 +128,10 @@ public class ClaimRestController {
         }
     }
 
-    // PBI-BE-I14: POST Submit Claim (Customer, Admin)
+    /**
+     * POST Submit Claim (Customer, Admin).
+     * Mengajukan klaim baru.
+     */
     @PostMapping("/submit/{orderedPlanId}")
     @PreAuthorize("hasAnyRole('CUSTOMER', 'SUPERADMIN')")
     public ResponseEntity<BaseResponseDTO<ClaimDetailResponseDTO>> submitClaim(
@@ -150,7 +166,10 @@ public class ClaimRestController {
         }
     }
 
-    // PBI-BE-I8: PUT Process Claim (Admin, Provider)
+    /**
+     * PUT Process Claim (Admin, Provider).
+     * Memproses persetujuan atau penolakan klaim.
+     */
     @PutMapping("/process/{claimId}")
     @PreAuthorize("hasAnyRole('SUPERADMIN', 'INSURANCE_PROVIDER')")
     public ResponseEntity<BaseResponseDTO<ClaimDetailResponseDTO>> processClaim(

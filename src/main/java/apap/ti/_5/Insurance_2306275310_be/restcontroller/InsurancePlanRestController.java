@@ -20,6 +20,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * Controller untuk mengelola Insurance Plan.
+ */
 @RestController
 @AllArgsConstructor
 @RequestMapping("/api/insurance-plan")
@@ -27,6 +30,9 @@ public class InsurancePlanRestController {
 
     private final InsurancePlanService insurancePlanService;
 
+    /**
+     * Mendapatkan ID user yang sedang login.
+     */
     private String getCurrentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null) return null;
@@ -44,12 +50,18 @@ public class InsurancePlanRestController {
         return principal.toString();
     }
 
+    /**
+     * Mengecek apakah user adalah Superadmin.
+     */
     private boolean isSuperAdmin() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return auth != null && auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERADMIN"));
     }
 
+    /**
+     * Mengambil semua Insurance Plan (dengan opsi search).
+     */
     @GetMapping
     @PreAuthorize("hasAnyRole('SUPERADMIN', 'INSURANCE_PROVIDER', 'CUSTOMER')")
     public ResponseEntity<BaseResponseDTO<List<InsurancePlanResponseDTO>>> getAllPlans(
@@ -74,6 +86,9 @@ public class InsurancePlanRestController {
         }
     }
 
+    /**
+     * Mengambil Insurance Plan berdasarkan Provider.
+     */
     @GetMapping("/by-provider")
     @PreAuthorize("hasAnyRole('SUPERADMIN', 'INSURANCE_PROVIDER')")
     public ResponseEntity<BaseResponseDTO<List<InsurancePlanResponseDTO>>> getPlansByProvider(
@@ -109,6 +124,9 @@ public class InsurancePlanRestController {
         }
     }
 
+    /**
+     * Mengambil Insurance Plan berdasarkan ID.
+     */
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('SUPERADMIN', 'INSURANCE_PROVIDER', 'CUSTOMER')")
     public ResponseEntity<BaseResponseDTO<InsurancePlanResponseDTO>> getPlanById(@PathVariable("id") String id) {
@@ -129,6 +147,9 @@ public class InsurancePlanRestController {
         return new ResponseEntity<>(baseResponseDTO, HttpStatus.OK);
     }
 
+    /**
+     * Membuat Insurance Plan baru.
+     */
     @PostMapping("/create")
     @PreAuthorize("hasAnyRole('SUPERADMIN', 'INSURANCE_PROVIDER')")
     public ResponseEntity<BaseResponseDTO<InsurancePlanResponseDTO>> createInsurancePlan(
@@ -174,6 +195,9 @@ public class InsurancePlanRestController {
         }
     }
 
+    /**
+     * Memperbarui Insurance Plan.
+     */
     @PutMapping("/update")
     @PreAuthorize("hasAnyRole('SUPERADMIN', 'INSURANCE_PROVIDER')")
     public ResponseEntity<BaseResponseDTO<InsurancePlanResponseDTO>> updateInsurancePlan(
@@ -226,6 +250,9 @@ public class InsurancePlanRestController {
         }
     }
 
+    /**
+     * Menghapus Insurance Plan (Soft Delete).
+     */
     @DeleteMapping("/delete/{id}")
     @PreAuthorize("hasAnyRole('SUPERADMIN', 'INSURANCE_PROVIDER')")
     public ResponseEntity<BaseResponseDTO<InsurancePlanResponseDTO>> deleteInsurancePlan(
@@ -270,6 +297,9 @@ public class InsurancePlanRestController {
         }
     }
 
+    /**
+     * Mengambil Insurance Plan berdasarkan Service.
+     */
     @GetMapping("/by-service")
     @PreAuthorize("hasAnyRole('SUPERADMIN', 'CUSTOMER')")
     public ResponseEntity<BaseResponseDTO<List<InsurancePlanResponseDTO>>> getPlansByService(
@@ -289,5 +319,4 @@ public class InsurancePlanRestController {
             return new ResponseEntity<>(baseResponseDTO, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
 }

@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Controller untuk mengelola Payment Method.
+ */
 @RestController
 @RequestMapping("/api/payment-method")
 public class PaymentMethodRestController {
@@ -20,12 +23,18 @@ public class PaymentMethodRestController {
     @Autowired
     private PaymentMethodService paymentMethodService;
 
+    /**
+     * Mengambil semua Payment Method.
+     */
     @GetMapping("/all")
     @PreAuthorize("hasAnyRole('SUPERADMIN', 'CUSTOMER')")
     public ResponseEntity<List<PaymentMethod>> getAllPaymentMethods() {
         return ResponseEntity.ok(paymentMethodService.getAllPaymentMethods());
     }
 
+    /**
+     * Menambahkan Payment Method baru.
+     */
     @PostMapping("/create")
     @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<PaymentMethod> addPaymentMethod(@RequestBody AddPaymentMethodRequestDTO request) {
@@ -33,6 +42,9 @@ public class PaymentMethodRestController {
         return ResponseEntity.status(HttpStatus.CREATED).body(newMethod);
     }
 
+    /**
+     * Memperbarui status Payment Method.
+     */
     @PutMapping("/{id}/status")
     @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<PaymentMethod> updateStatus(
@@ -42,6 +54,9 @@ public class PaymentMethodRestController {
         return ResponseEntity.ok(updatedMethod);
     }
 
+    /**
+     * Menghapus Payment Method.
+     */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<String> deletePaymentMethod(@PathVariable("id") UUID id) {

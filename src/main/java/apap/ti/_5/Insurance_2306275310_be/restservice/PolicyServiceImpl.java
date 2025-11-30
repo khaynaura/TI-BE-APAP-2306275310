@@ -27,10 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * Implementasi dari interface {@link PolicyService}.
- * Menangani logika bisnis terkait pembuatan, pengambilan, dan pembayaran polis asuransi.
- */
 @Service
 @Transactional
 public class PolicyServiceImpl implements PolicyService {
@@ -40,21 +36,17 @@ public class PolicyServiceImpl implements PolicyService {
     private final OrderedPlanRepository orderedPlanRepository;
     private final WebClient webClient;
 
-    // URL Service Eksternal dari application.yml
     @Value("${billing.service.url}")
     private String billingServiceUrl;
 
     @Value("${flight.service.url}")
     private String flightServiceUrl;
 
-    @Value("${accommodation.service.url}") // Accommodation
+    @Value("${accommodation.service.url}")
     private String accommodationServiceUrl;
 
     @Value("${rental.service.url}")
     private String rentalServiceUrl;
-
-    // @Value("${package.service.url}")
-    // private String packageServiceUrl;
 
     public PolicyServiceImpl(PolicyRepository policyRepository,
                              InsurancePlanRepository insurancePlanRepository,
@@ -66,18 +58,10 @@ public class PolicyServiceImpl implements PolicyService {
         this.webClient = webClientBuilder.build();
     }
 
-    /**
-     * Membuat polis asuransi baru berdasarkan permintaan user.
-     * Melakukan validasi Booking ID ke service eksternal, membuat OrderedPlan, dan mengirim tagihan ke Billing Service.
-     *
-     * @param createDTO Data transfer object berisi detail polis yang akan dibuat.
-     * @return {@link PolicyResponseDTO} yang berisi data polis yang berhasil dibuat.
-     * @throws IllegalArgumentException Jika ID booking tidak valid atau plan tidak sesuai.
-     */
     @Override
     public PolicyResponseDTO createPolicy(CreatePolicyRequestDTO createDTO) {
 
-        // 1. Validasi Booking ID ke Service Lain (Accommodation, Flight, dll)
+        // 1. Validasi Booking ID (BYPASS kalau Tour Package)
         validateBookingId(createDTO.getService(), createDTO.getBookingId());
 
         // 2. Validasi & Ambil Insurance Plans
@@ -98,12 +82,12 @@ public class PolicyServiceImpl implements PolicyService {
 
         // 3. Buat Object Policy
         Policy policy = new Policy();
-        policy.setId("POL" + (policyRepository.count() + 1)); // ID: POL1, POL2...
+        policy.setId("POL" + (policyRepository.count() + 1));
         policy.setUserId(createDTO.getUserId());
         policy.setBookingId(createDTO.getBookingId());
         policy.setService(createDTO.getService());
         policy.setStartDate(LocalDate.now());
-        policy.setStatus("CREATED"); // Awalnya CREATED
+        policy.setStatus("CREATED");
         policy.setTotalPrice(totalPrice);
         policy.setTotalCoverage(totalCoverage);
 
@@ -121,27 +105,30 @@ public class PolicyServiceImpl implements PolicyService {
             i++;
         }
 
-        // Simpan ke DB
         policy.setOrderedPlans(new ArrayList<>());
         Policy savedPolicy = policyRepository.save(policy);
-
         List<OrderedPlan> savedOrderedPlans = orderedPlanRepository.saveAll(orderedPlans);
         savedPolicy.setOrderedPlans(savedOrderedPlans);
 
-        // 5. Integrasi Billing (Create Tagihan)
+        // 5. Integrasi Billing
         createBill(savedPolicy);
 
         return convertToResponseDTO(savedPolicy);
     }
 
     /**
-     * Memvalidasi keberadaan Booking ID di service eksternal terkait.
-     *
-     * @param service   Jenis layanan (Flight, Accommodation, dll).
-     * @param bookingId ID Booking yang akan divalidasi.
+     * Memvalidasi keberadaan Booking ID.
+     * KHUSUS TOUR_PACKAGE DI-SKIP (AUTO PASS).
      */
     private void validateBookingId(ServiceEnum service, String bookingId) {
         String targetUrl = "";
+
+        // --- BYPASS LOGIC START ---
+        if (service == ServiceEnum.TOUR_PACKAGE) {
+            System.out.println("MOCK VALIDATION: Bypass check for Tour Package ID: " + bookingId);
+            return; // LANGSUNG LOLOS
+        }
+        // --- BYPASS LOGIC END ---
 
         switch (service.name()) {
             case "FLIGHT":
@@ -156,12 +143,8 @@ public class PolicyServiceImpl implements PolicyService {
             case "Rentals":
                 targetUrl = rentalServiceUrl + "/api/bookings/" + bookingId;
                 break;
-            // case "PACKAGE":
-            // case "Tour Package":
-            //     targetUrl = packageServiceUrl + "/api/package-booking/" + bookingId;
-            //     break;
             default:
-                return; // Skip validasi kalau service lain
+                return;
         }
 
         try {
@@ -183,11 +166,6 @@ public class PolicyServiceImpl implements PolicyService {
         }
     }
 
-    /**
-     * Mengirim permintaan pembuatan tagihan ke Billing Service.
-     *
-     * @param policy Data polis yang akan dibuatkan tagihannya.
-     */
     private void createBill(Policy policy) {
         try {
             Map<String, Object> billPayload = new HashMap<>();
@@ -211,6 +189,7 @@ public class PolicyServiceImpl implements PolicyService {
         }
     }
 
+    // ... (SISA METHOD GET & HELPER TIDAK BERUBAH) ...
     @Override
     public List<PolicyResponseDTO> getAllPolicies() {
         List<Policy> allPolicies = policyRepository.findAll();
@@ -233,12 +212,6 @@ public class PolicyServiceImpl implements PolicyService {
         return convertToResponseDTO(policy);
     }
 
-    /**
-     * Memproses pembayaran polis. Mengubah status polis dan ordered plan menjadi PAID.
-     *
-     * @param policyId ID polis yang akan dibayar.
-     * @return {@link PolicyResponseDTO} yang telah diperbarui.
-     */
     @Override
     public PolicyResponseDTO payPolicy(String policyId) {
         Policy policy = policyRepository.findById(policyId)
@@ -262,11 +235,6 @@ public class PolicyServiceImpl implements PolicyService {
         return convertToResponseDTO(savedPolicy);
     }
 
-    /**
-     * Memeriksa dan memperbarui status kadaluarsa (EXPIRED) untuk polis dan ordered plan.
-     *
-     * @param policy Objek polis yang akan diperiksa.
-     */
     private void checkAndSetExpiration(Policy policy) {
         if ("EXPIRED".equals(policy.getStatus())) return;
 
@@ -275,22 +243,17 @@ public class PolicyServiceImpl implements PolicyService {
         boolean hasClaimed = false;
 
         for (OrderedPlan op : plans) {
-            if ("CLAIMED".equals(op.getStatus())) {
-                hasClaimed = true;
-            }
-
+            if ("CLAIMED".equals(op.getStatus())) hasClaimed = true;
             if (op.getExpiredDate().isBefore(LocalDate.now()) && !"CLAIMED".equals(op.getStatus())) {
                 if (!"EXPIRED".equals(op.getStatus())) {
                     op.setStatus("EXPIRED");
                     orderedPlanRepository.save(op);
                 }
             }
-
             if (!"CLAIMED".equals(op.getStatus()) && !"EXPIRED".equals(op.getStatus())) {
                 hasUnclaimedNonExpired = true;
             }
         }
-
         if (!hasClaimed && !hasUnclaimedNonExpired) {
             policy.setStatus("EXPIRED");
             policyRepository.save(policy);
@@ -329,9 +292,6 @@ public class PolicyServiceImpl implements PolicyService {
 
     private String getTokenFromRequest() {
         ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        if (attrs != null) {
-            return attrs.getRequest().getHeader(HttpHeaders.AUTHORIZATION);
-        }
-        return null;
+        return (attrs != null) ? attrs.getRequest().getHeader(HttpHeaders.AUTHORIZATION) : null;
     }
 }

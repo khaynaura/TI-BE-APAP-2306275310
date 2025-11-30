@@ -16,6 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Date;
 
+/**
+ * Controller untuk mengelola Ordered Plan.
+ */
 @RestController
 @AllArgsConstructor
 @RequestMapping("/api/ordered-plan")
@@ -42,6 +45,9 @@ public class OrderedPlanRestController {
                 .anyMatch(a -> a.getAuthority().equals("ROLE_CUSTOMER"));
     }
 
+    /**
+     * Mengambil Detail Ordered Plan.
+     */
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('CUSTOMER', 'SUPERADMIN')")
     public ResponseEntity<BaseResponseDTO<OrderedPlanDetailResponseDTO>> getOrderedPlanDetail(
@@ -51,7 +57,6 @@ public class OrderedPlanRestController {
         try {
             OrderedPlanDetailResponseDTO data = orderedPlanService.getOrderedPlanDetailById(id);
             
-            // [SECURE] Validasi Kepemilikan
             if (isCustomer()) {
                 String currentUserId = getCurrentUserId();
    
