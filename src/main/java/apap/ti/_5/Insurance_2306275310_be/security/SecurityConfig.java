@@ -62,7 +62,16 @@ public class SecurityConfig {
    
                 .requestMatchers("/api/external/bookings").authenticated() 
 
-                .requestMatchers("/api/payment-method/all").hasAnyRole("CUSTOMER", "SUPERADMIN")
+                // --- PAYMENT METHOD ---
+                // 1. GET All (Boleh Customer & Admin) - Taruh paling atas!
+                .requestMatchers(HttpMethod.GET, "/api/payment-method/all").hasAnyRole("CUSTOMER", "SUPERADMIN")
+
+                // 2. Create, Update, Delete (Hanya Admin)
+                .requestMatchers(HttpMethod.POST, "/api/payment-method/create").hasRole("SUPERADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/payment-method/*/status").hasRole("SUPERADMIN") // Pakai wildcard * untuk ID
+                .requestMatchers(HttpMethod.DELETE, "/api/payment-method/*").hasRole("SUPERADMIN")
+
+                // 3. (Opsional) Catch-all buat payment method sisanya ke Admin
                 .requestMatchers("/api/payment-method/**").hasRole("SUPERADMIN")
 
                 .requestMatchers(HttpMethod.GET, "/api/top-up/all").hasRole("SUPERADMIN")
