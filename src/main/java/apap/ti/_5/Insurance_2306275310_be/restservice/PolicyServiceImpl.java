@@ -53,8 +53,8 @@ public class PolicyServiceImpl implements PolicyService {
     @Value("${rental.service.url}")
     private String rentalServiceUrl;
 
-    @Value("${package.service.url}")
-    private String packageServiceUrl;
+    // @Value("${package.service.url}")
+    // private String packageServiceUrl;
 
     public PolicyServiceImpl(PolicyRepository policyRepository,
                              InsurancePlanRepository insurancePlanRepository,
