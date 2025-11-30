@@ -101,11 +101,11 @@ public class ExternalDataServiceImpl {
                 jsonIdKey = "bookingID";
                 break;
             case FLIGHT:
-                url = flightServiceUrl + "/api/flight-bookings";
+                url = flightServiceUrl + "/api/bookings";
                 jsonIdKey = "id";
                 break;
             case RENTALS:
-                url = rentalServiceUrl + "/api/rental-bookings";
+                url = rentalServiceUrl + "/api/bookings";
                 jsonIdKey = "id";
                 break;
             default:

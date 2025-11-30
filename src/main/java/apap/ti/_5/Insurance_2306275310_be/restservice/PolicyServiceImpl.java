@@ -146,7 +146,7 @@ public class PolicyServiceImpl implements PolicyService {
         switch (service.name()) {
             case "FLIGHT":
             case "Flight":
-                targetUrl = flightServiceUrl + "/api/flight-booking/" + bookingId;
+                targetUrl = flightServiceUrl + "/api/bookings/" + bookingId;
                 break;
             case "ACCOMMODATION":
             case "Accommodation":
@@ -154,7 +154,7 @@ public class PolicyServiceImpl implements PolicyService {
                 break;
             case "RENTAL":
             case "Rentals":
-                targetUrl = rentalServiceUrl + "/api/rental-booking/" + bookingId;
+                targetUrl = rentalServiceUrl + "/api/bookings/" + bookingId;
                 break;
             // case "PACKAGE":
             // case "Tour Package":
