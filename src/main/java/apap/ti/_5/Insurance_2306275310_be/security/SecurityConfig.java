@@ -27,50 +27,32 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // 1. Matikan CSRF karena kita pakai Token (bukan session browser biasa)
-            .csrf(csrf -> csrf.disable())
 
-            // 2. Aktifkan CORS dengan konfigurasi di bawah (agar Vue.js bisa masuk)
+            .csrf(csrf -> csrf.disable())
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-            // 3. Set Session jadi Stateless (Wajib untuk JWT)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
-            // 4. Pasang Filter JWT kita sebelum filter bawaan Spring
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 
-            // 5. Aturan Akses (RBAC) sesuai PBI
             .authorizeHttpRequests(auth -> auth
-                // --- PUBLIC & SYSTEM ENDPOINTS ---
                 .requestMatchers("/api/public/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/policy/notify-payment").permitAll() // Callback dari Bill Service
+                .requestMatchers(HttpMethod.POST, "/api/policy/notify-payment").permitAll() 
 
-                // --- INSURANCE PLAN ---
-                // I1, I3: Read All & Detail (Semua User yang login boleh lihat)
                 .requestMatchers(HttpMethod.GET, "/api/insurance-plan/**").hasAnyRole("SUPERADMIN", "INSURANCE_PROVIDER", "CUSTOMER")
                 
-                // I2, I4, I5: Create, Update, Delete, My Plans (Hanya Admin & Provider)
                 .requestMatchers(HttpMethod.POST, "/api/insurance-plan/create").hasAnyRole("SUPERADMIN", "INSURANCE_PROVIDER")
                 .requestMatchers(HttpMethod.PUT, "/api/insurance-plan/update").hasAnyRole("SUPERADMIN", "INSURANCE_PROVIDER")
                 .requestMatchers(HttpMethod.DELETE, "/api/insurance-plan/delete/**").hasAnyRole("SUPERADMIN", "INSURANCE_PROVIDER")
                 .requestMatchers(HttpMethod.GET, "/api/insurance-plan/my-plans").hasAnyRole("SUPERADMIN", "INSURANCE_PROVIDER")
-
-                // --- CLAIMS ---
-                // I7, I8: Read All & Process (Hanya Admin & Provider)
                 .requestMatchers(HttpMethod.GET, "/api/claim").hasAnyRole("SUPERADMIN", "INSURANCE_PROVIDER") 
                 .requestMatchers(HttpMethod.PUT, "/api/claim/process/**").hasAnyRole("SUPERADMIN", "INSURANCE_PROVIDER")
 
-                // I14: Create Claim (Hanya Customer & Admin)
                 .requestMatchers(HttpMethod.POST, "/api/claim/submit/**").hasAnyRole("CUSTOMER", "SUPERADMIN")
-
-                // --- POLICY & ORDERED PLAN ---
-                // I9, I10, I11, I12: Create, Read, Detail (Customer & Admin)
                 .requestMatchers(HttpMethod.POST, "/api/policy/create").hasAnyRole("CUSTOMER", "SUPERADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/policy/**").hasAnyRole("CUSTOMER", "SUPERADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/ordered-plan/**").hasAnyRole("CUSTOMER", "SUPERADMIN")
 
-                // --- STATISTICS ---
-                // I15: View Stats (Hanya Admin & Provider)
+
                 .requestMatchers(HttpMethod.GET, "/api/statistics/summary").hasAnyRole("SUPERADMIN", "INSURANCE_PROVIDER", "CUSTOMER")
                 .requestMatchers(HttpMethod.GET, "/api/statistics/**").hasAnyRole("SUPERADMIN", "INSURANCE_PROVIDER")
 
@@ -79,58 +61,40 @@ public class SecurityConfig {
                 .requestMatchers("/api/external/customers").hasRole("SUPERADMIN")
    
                 .requestMatchers("/api/external/bookings").authenticated() 
-                                // --- PAYMENT METHOD (PBI-BE-TU6 s/d TU9) ---
-                // Semua fitur Payment Method HANYA untuk Superadmin
                 .requestMatchers("/api/payment-method/**").hasRole("SUPERADMIN")
-
-                // --- TOP UP TRANSACTION ---
-                // PBI-BE-TU1: Get All (Superadmin)
+                .requestMatchers("/api/payment-method/all").hasAnyRole("SUPERADMIN", "CUSTOMER")
                 .requestMatchers(HttpMethod.GET, "/api/top-up/all").hasRole("SUPERADMIN")
-                
-                // PBI-BE-TU1: Get History (Customer) - Validasi ID dilakukan di Controller
                 .requestMatchers(HttpMethod.GET, "/api/top-up/history/**").hasAnyRole("CUSTOMER", "SUPERADMIN")
 
-                // PBI-BE-TU2 & TU5: Get Detail & Delete (Superadmin)
                 .requestMatchers(HttpMethod.GET, "/api/top-up/{id}").hasRole("SUPERADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/top-up/{id}").hasRole("SUPERADMIN")
 
-                // PBI-BE-TU3: Create Top Up (Customer)
                 .requestMatchers(HttpMethod.POST, "/api/top-up/create").hasRole("CUSTOMER")
 
-                // PBI-BE-TU4: Update Status (Superadmin)
                 .requestMatchers(HttpMethod.PUT, "/api/top-up/{id}/status").hasRole("SUPERADMIN")
-
-
-                // SISANYA WAJIB LOGIN
                 .anyRequest().authenticated()
             );
 
         return http.build();
     }
 
-    // --- KONFIGURASI CORS (PENTING UNTUK FRONTEND) ---
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        
-        // Daftar URL Frontend yang diizinkan
+
         configuration.setAllowedOrigins(List.of(
-            "http://localhost:5173",  // Vue.js Development
-            "http://localhost:3000"   // Port alternatif
-            // Nanti tambahkan URL deploy di sini, misal: "http://insurance.hafizmuh.site"
+            "http://localhost:5173",  
+            "http://localhost:3000",  
+            "http://2306275310-fe.hafizmuh.site"
         ));
         
-        // Izinkan Method apa saja
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        
-        // Izinkan Header apa saja (terutama Authorization untuk kirim Token)
+        configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
-        
-        // Izinkan credentials (cookies/auth headers)
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration); // Terapkan ke semua endpoint
+        source.registerCorsConfiguration("/**", configuration); 
         return source;
     }
 }

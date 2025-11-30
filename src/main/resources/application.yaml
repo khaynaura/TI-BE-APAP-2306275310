@@ -14,25 +14,26 @@ spring:
     hibernate:
       ddl-auto: create-drop
 
+frontend:
+  url: ${FRONTEND_URL:http://localhost:5173}
+
 profile:
   service:
-    url: http://localhost:8082
-
-
-# Billing Service (Pembayaran)
-billing:
+    url: ${PROFILE_SERVICE_URL:http://localhost:8082} 
+accommodation:
   service:
-    url: http://localhost:8085      # Sesuaikan port teman kelompok bagian Billing
+    url: ${ACCOMMODATION_SERVICE_URL:http://localhost:8082}
 
-# Booking Services (Untuk Validasi PBI-BE-I9)
 flight:
   service:
-    url: http://localhost:8086      # Sesuaikan port teman kelompok bagian Flight
+    url: ${FLIGHT_SERVICE_URL:http://localhost:8083} 
 
 rental:
   service:
-    url: http://localhost:8088      # Sesuaikan port teman kelompok bagian Rental
-
-package:
+    url: ${RENTAL_SERVICE_URL:http://localhost:8084} 
+billing:
   service:
-    url: http://localhost:8089      # Sesuaikan port teman kelompok bagian Package
+    url: ${BILLING_SERVICE_URL:http://localhost:8085}
+
+insurance:
+  api-key: ${INSURANCE_API_KEY:super-secret-key-123}

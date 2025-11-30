@@ -20,7 +20,6 @@ public class ExternalDataRestController {
 
     private final ExternalDataServiceImpl externalDataService;
 
-    // 1. Providers (Untuk Create Plan - Admin)
     @GetMapping("/providers")
     @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<BaseResponseDTO<List<ProviderDTO>>> getAllProviders() {
@@ -31,7 +30,6 @@ public class ExternalDataRestController {
         return ResponseEntity.ok(res);
     }
 
-    // 2. Customers (Untuk Create Policy - Admin)
     @GetMapping("/customers")
     @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<BaseResponseDTO<List<OptionDTO>>> getCustomers() {
@@ -42,7 +40,7 @@ public class ExternalDataRestController {
         return ResponseEntity.ok(res);
     }
 
-    // 3. Bookings (Untuk Create Policy - Admin & Customer)
+
     @GetMapping("/bookings")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BaseResponseDTO<List<OptionDTO>>> getBookings(@RequestParam ServiceEnum service) {

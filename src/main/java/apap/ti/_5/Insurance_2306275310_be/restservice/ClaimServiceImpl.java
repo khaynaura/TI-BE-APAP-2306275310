@@ -79,6 +79,11 @@ public class ClaimServiceImpl implements ClaimService {
             throw new IllegalStateException("Cannot submit claim, ordered plan has expired.");
         }
 
+        if (orderedPlan.getStatus().equals("CREATED")) { 
+            throw new IllegalStateException("Cannot submit claim, this plan has not been paid.");
+        }
+
+
         // tidak boleh claim jika status OrderedPlan sudah CLAIMED (sudah pernah di-ACCEPT)
         if (orderedPlan.getStatus().equals("CLAIMED")) { 
             throw new IllegalStateException("Cannot submit claim, this plan has already been claimed.");
@@ -208,16 +213,13 @@ public class ClaimServiceImpl implements ClaimService {
 
     @Override
     public boolean isClaimOwner(String claimId, String userId) {
-        // 1. Cari Claim berdasarkan claimId
+
         Claim claim = claimRepository.findById(claimId).orElse(null); 
-        
-        // Jika claim tidak ada, otomatis bukan pemilik (return false)
+
         if (claim == null) {
             return false;
         }
-    
-        // 2. Cek alur relasi: Claim -> OrderedPlan -> Policy -> User ID
-        // Kita bandingkan User ID di Policy dengan userId yang sedang login
+
         return claim.getOrderedPlan().getPolicy().getUserId().equals(userId);
     }
     

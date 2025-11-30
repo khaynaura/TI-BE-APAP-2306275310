@@ -36,21 +36,17 @@ public class StatisticsServiceImpl implements StatisticsService {
         long totalPolicies = 0;
         long totalClaims = 0;
 
-        // Logic percabangan berdasarkan parameter yang dikirim Controller
         if ("ROLE_CUSTOMER".equals(role)) {
-            // CUSTOMER
             totalPlans = insurancePlanRepository.countByDeletedAtIsNull(); 
             totalPolicies = policyRepository.countByUserId(userId);
             totalClaims = claimRepository.countByCustomerUserId(userId);
 
         } else if ("ROLE_INSURANCE_PROVIDER".equals(role)) {
-            // PROVIDER
             totalPlans = insurancePlanRepository.countByProviderIdAndDeletedAtIsNull(userId);
             totalPolicies = policyRepository.countByProviderId(userId);
             totalClaims = claimRepository.countByProviderId(userId);
 
         } else {
-            // SUPERADMIN (Default)
             totalPlans = insurancePlanRepository.countByDeletedAtIsNull();
             totalPolicies = policyRepository.count();
             totalClaims = claimRepository.count();
@@ -65,7 +61,7 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public ChartDataResponseDTO getChartStatistics(int timePeriod, String service, String providerId) {
-        // (Sama seperti sebelumnya, service ini sudah "dumb" karena providerId dikirim dari controller)
+       
         if (timePeriod <= 0) timePeriod = 3;
 
         LocalDateTime startDate = LocalDateTime.now().minusMonths(timePeriod - 1)
@@ -85,7 +81,7 @@ public class StatisticsServiceImpl implements StatisticsService {
         return convertToChartDTO(results, timePeriod);
     }
     
-    // ... helper method convertToChartDTO sama ...
+ 
     private ChartDataResponseDTO convertToChartDTO(List<MonthlyOrderCount> results, int timePeriod) {
         Map<Integer, Long> resultMap = results.stream()
                 .collect(Collectors.toMap(

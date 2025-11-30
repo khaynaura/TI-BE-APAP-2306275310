@@ -8,13 +8,11 @@ import java.util.List;
 import java.util.UUID;
 
 public interface TopUpService {
-    // Basic Features
     TopUpTransaction createTopUp(CreateTopUpRequestDTO request);
     TopUpTransaction updateStatusTopUp(UUID transactionId, UpdateStatusTopUpRequestDTO request);
     List<TopUpTransaction> getHistoryByUserId(UUID userId);
     List<TopUpTransaction> getAllTransactions();
 
-    // --- TAMBAHAN BARU (Supaya PBI Lengkap) ---
     TopUpTransaction getTransactionById(UUID transactionId);
     void deleteTopUpTransaction(UUID transactionId);
 }

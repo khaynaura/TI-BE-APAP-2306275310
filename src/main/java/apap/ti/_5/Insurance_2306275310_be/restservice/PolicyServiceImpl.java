@@ -36,14 +36,12 @@ public class PolicyServiceImpl implements PolicyService {
     private final OrderedPlanRepository orderedPlanRepository;
     private final WebClient webClient;
 
-    // URL Service Teman (Pastikan port di application.yml benar!)
     @Value("${billing.service.url}")
     private String billingServiceUrl;
 
     @Value("${flight.service.url}")
     private String flightServiceUrl;
 
-    // Menggunakan default value biar gak error kalau yml belum ada
     @Value("${profile.service.url}") 
     private String accommodationServiceUrl;
 
@@ -52,6 +50,9 @@ public class PolicyServiceImpl implements PolicyService {
 
     @Value("${package.service.url}")
     private String packageServiceUrl;
+
+    @Value("${insurance.api-key:super-secret-key-123}") 
+    private String apiKey;
 
     public PolicyServiceImpl(PolicyRepository policyRepository,
                              InsurancePlanRepository insurancePlanRepository,
@@ -65,12 +66,8 @@ public class PolicyServiceImpl implements PolicyService {
 
     @Override
     public PolicyResponseDTO createPolicy(CreatePolicyRequestDTO createDTO) {
-
-        // 1. VALIDASI BOOKING ID KE SERVICE LAIN (PENTING)
-        // Ini akan nembak API teman kamu. Kalau ID gak ada -> Error.
         validateBookingId(createDTO.getService(), createDTO.getBookingId());
 
-        // 2. Validasi & Ambil Insurance Plans
         List<InsurancePlan> plans = insurancePlanRepository.findAllById(createDTO.getInsurancePlanIds());
         
         if (plans.size() != createDTO.getInsurancePlanIds().size()) {
@@ -86,18 +83,16 @@ public class PolicyServiceImpl implements PolicyService {
         int totalPrice = plans.stream().mapToInt(InsurancePlan::getPrice).sum();
         int totalCoverage = plans.stream().mapToInt(InsurancePlan::getCoverage).sum();
 
-        // 3. Buat Object Policy
         Policy policy = new Policy();
-        policy.setId("POL" + (policyRepository.count() + 1)); // ID: POL1, POL2...
+        policy.setId("POL" + (policyRepository.count() + 1));
         policy.setUserId(createDTO.getUserId());
         policy.setBookingId(createDTO.getBookingId());
         policy.setService(createDTO.getService());
         policy.setStartDate(LocalDate.now());
-        policy.setStatus("CREATED"); // Awalnya CREATED
+        policy.setStatus("CREATED");
         policy.setTotalPrice(totalPrice);
         policy.setTotalCoverage(totalCoverage);
 
-        // 4. Buat Object OrderedPlan
         List<OrderedPlan> orderedPlans = new ArrayList<>();
         int i = 1;
         for (InsurancePlan plan : plans) {
@@ -111,30 +106,25 @@ public class PolicyServiceImpl implements PolicyService {
             i++;
         }
 
-        // Simpan ke DB
         policy.setOrderedPlans(new ArrayList<>());
         Policy savedPolicy = policyRepository.save(policy);
 
         List<OrderedPlan> savedOrderedPlans = orderedPlanRepository.saveAll(orderedPlans);
         savedPolicy.setOrderedPlans(savedOrderedPlans);
 
-        // 5. INTEGRASI BILLING (Create Tagihan)
         createBill(savedPolicy);
 
         return convertToResponseDTO(savedPolicy);
     }
 
-    // === METHOD VALIDASI BOOKING (KUNCI SUKSES) ===
     private void validateBookingId(ServiceEnum service, String bookingId) {
         String targetUrl = "";
 
-        // Tentukan URL berdasarkan Service
         switch (service.name()) {
             case "FLIGHT": case "Flight":
                 targetUrl = flightServiceUrl + "/api/flight-booking/" + bookingId;
                 break;
             case "ACCOMMODATION": case "Accommodation":
-                // Endpoint sesuai Accommodation Controller temanmu
                 targetUrl = accommodationServiceUrl + "/api/bookings/" + bookingId; 
                 break;
             case "RENTAL": case "Rentals":
@@ -144,16 +134,14 @@ public class PolicyServiceImpl implements PolicyService {
                 targetUrl = packageServiceUrl + "/api/package-booking/" + bookingId;
                 break;
             default:
-                return; // Skip validasi kalau service lain
+                return; 
         }
 
         try {
-            // AMBIL TOKEN DARI REQUEST USER & KIRIM KE SERVICE TEMAN
             String token = getTokenFromRequest();
-
             webClient.get()
                     .uri(targetUrl)
-                    .header(HttpHeaders.AUTHORIZATION, token) // <--- INI YANG BIKIN WORKS
+                    .header(HttpHeaders.AUTHORIZATION, token)
                     .retrieve()
                     .toBodilessEntity()
                     .block();
@@ -162,69 +150,44 @@ public class PolicyServiceImpl implements PolicyService {
             if (e.getStatusCode().value() == 404) {
                 throw new IllegalArgumentException("Booking ID " + bookingId + " tidak ditemukan di sistem " + service);
             }
-            // Abaikan error lain (misal service mati), anggap valid biar gak blocking
             System.err.println("WARNING: Gagal validasi ke " + service + " (" + e.getStatusCode() + ")");
         } catch (Exception e) {
              System.err.println("WARNING: Service " + service + " tidak merespons. Validasi di-skip.");
         }
     }
 
-    // === METHOD CREATE BILL (SESUAI PBI BILLING) ===
     private void createBill(Policy policy) {
         try {
-            // 1. Persiapkan Payload Sesuai PBI-BE-B1
             Map<String, Object> billPayload = new HashMap<>();
-            
-            // [MANDATORY] ID Customer (Diambil dari Policy)
-            billPayload.put("customerId", policy.getUserId()); 
-            
-            // [MANDATORY] Nama Service (Harus "Insurance" sesuai enum di Billing)
+            billPayload.put("customerId", policy.getUserId());
             billPayload.put("serviceName", "Insurance");
-            
-            // [MANDATORY] ID Referensi (Policy ID kita)
-            // Nanti pas Billing callback, dia bakal balikin ID ini sebagai refId
             billPayload.put("serviceReferenceId", policy.getId());
-            
-            // [MANDATORY] Deskripsi
             billPayload.put("description", "Insurance Payment for Booking " + policy.getBookingId());
-            
-            // [MANDATORY] Harga
             billPayload.put("amount", policy.getTotalPrice());
-
-            String token = getTokenFromRequest();
-
-            // 2. Tembak API Billing
+            
             Map response = webClient.post()
                     .uri(billingServiceUrl + "/api/bill/create")
-                    .header(HttpHeaders.AUTHORIZATION, token)
+                    .header("API-KEY", apiKey)
                     .bodyValue(billPayload)
                     .retrieve()
                     .bodyToMono(Map.class)
                     .block();
 
-            // 3. Tangkap Response & Simpan Bill ID
-            // PBI B1: "Mengembalikan detail Bill yang baru dibuat"
             if (response != null && response.get("data") != null) {
                 Map<String, Object> data = (Map<String, Object>) response.get("data");
+                String billIdFromBilling = (String) data.get("id");
                 
-                // Ambil ID Bill dari response Billing
-                // Asumsi key-nya adalah "id" atau "billId" (sesuaikan dengan JSON temanmu)
-                String billIdFromBilling = (String) data.get("id"); 
-                
-                // Update Policy kita dengan Bill ID
                 policy.setBillId(billIdFromBilling);
                 policyRepository.save(policy);
                 
-                System.out.println(">>> BILL CREATED SUCCESSFULLY. Bill ID: " + billIdFromBilling);
+                System.out.println(">>> BILL CREATED. ID: " + billIdFromBilling);
             }
 
         } catch (Exception e) {
-            System.err.println("WARNING: Gagal membuat Bill. User tidak bisa bayar via sistem.");
-            System.err.println("Error: " + e.getMessage());
+            System.err.println("INFO: Gagal membuat Bill (Service Billing mungkin mati/belum siap).");
         }
     }
 
-    // --- SISA METHOD CRUD ---
     @Override
     public List<PolicyResponseDTO> getAllPolicies() {
         List<Policy> allPolicies = policyRepository.findAll();
@@ -329,12 +292,11 @@ public class PolicyServiceImpl implements PolicyService {
                 .build();
     }
 
-        // Helper: Ambil Token dari Header Request
-        private String getTokenFromRequest() {
-            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-            if (attrs != null) {
-                return attrs.getRequest().getHeader(HttpHeaders.AUTHORIZATION);
-            }
-            return null; // Atau throw error jika wajib ada
+    private String getTokenFromRequest() {
+        ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attrs != null) {
+            return attrs.getRequest().getHeader(HttpHeaders.AUTHORIZATION);
         }
+        return null;
+    }
 }

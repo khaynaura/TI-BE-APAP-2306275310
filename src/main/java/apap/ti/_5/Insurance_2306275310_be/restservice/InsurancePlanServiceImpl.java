@@ -6,13 +6,9 @@ import apap.ti._5.Insurance_2306275310_be.repository.InsurancePlanRepository;
 import apap.ti._5.Insurance_2306275310_be.restdto.request.insuranceplan.CreateInsurancePlanRequestDTO;
 import apap.ti._5.Insurance_2306275310_be.restdto.request.insuranceplan.UpdateInsurancePlanRequestDTO;
 import apap.ti._5.Insurance_2306275310_be.restdto.response.insuranceplan.InsurancePlanResponseDTO;
-import apap.ti._5.Insurance_2306275310_be.restdto.response.ProviderDTO; // Pastikan DTO ini sudah dibuat
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDate;
@@ -28,12 +24,9 @@ public class InsurancePlanServiceImpl implements InsurancePlanService {
     private final InsurancePlanRepository insurancePlanRepository;
     private final WebClient webClient;
 
-    // Ambil URL Profile Service dari application.yml
-    // Default fallback ke localhost:8081/api kalau belum diset
     @Value("${profile.service.url:http://localhost:8082/api}")
     private String profileServiceUrl;
 
-    // Constructor Injection (Manual biar bisa inject WebClient.Builder)
     public InsurancePlanServiceImpl(InsurancePlanRepository insurancePlanRepository, 
                                     WebClient.Builder webClientBuilder) {
         this.insurancePlanRepository = insurancePlanRepository;

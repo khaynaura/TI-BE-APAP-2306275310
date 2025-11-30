@@ -18,7 +18,6 @@ public class DataInitializer implements ApplicationRunner {
     private final PolicyRepository policyRepository;
     private final OrderedPlanRepository orderedPlanRepository;
 
-    // ID Sesuai Token Login Terakhir Kamu
     private final String ID_PROVIDER_AXA = "22f94d65-29d3-415b-9482-38210039e2cb";
     private final String ID_USER_BUDI = "c06102e8-9316-4ce7-b5cc-cecb96dee8ad";
 

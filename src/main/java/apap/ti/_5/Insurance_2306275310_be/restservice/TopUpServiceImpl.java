@@ -36,7 +36,6 @@ public class TopUpServiceImpl implements TopUpService {
 
     private final WebClient webClient;
 
-    // Mengambil URL Profile dari application.yml (Misal: http://localhost:8081/api)
     @Value("${profile.service.url}")
     private String profileServiceUrl;
 
@@ -45,26 +44,22 @@ public class TopUpServiceImpl implements TopUpService {
         this.webClient = webClientBuilder.build();
     }
 
-    // [PBI-BE-TU1] Superadmin melihat SEMUA transaksi
     @Override
     public List<TopUpTransaction> getAllTransactions() {
         return topUpTransactionRepository.findAll();
     }
 
-    // [PBI-BE-TU1] Customer melihat transaksi MILIKNYA SAJA
     @Override
     public List<TopUpTransaction> getHistoryByUserId(UUID userId) {
         return topUpTransactionRepository.findAllByEndUserId(userId);
     }
 
-    // [PBI-BE-TU2] Melihat Detail Transaksi by ID
     @Override
     public TopUpTransaction getTransactionById(UUID transactionId) {
         return topUpTransactionRepository.findById(transactionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found"));
     }
 
-    // [PBI-BE-TU3] Create Top Up Transaction
     @Override
     public TopUpTransaction createTopUp(CreateTopUpRequestDTO request) {
         if (request.getAmount() <= 0) {
@@ -82,12 +77,11 @@ public class TopUpServiceImpl implements TopUpService {
         transaction.setEndUserId(request.getEndUserId());
         transaction.setAmount(request.getAmount());
         transaction.setPaymentMethod(paymentMethod);
-        transaction.setStatus("Pending"); // Status Awal
+        transaction.setStatus("Pending"); 
 
         return topUpTransactionRepository.save(transaction);
     }
 
-    // [PBI-BE-TU4] Update Status & Tambah Saldo (LOGIC UTAMA)
     @Override
     public TopUpTransaction updateStatusTopUp(UUID transactionId, UpdateStatusTopUpRequestDTO request) {
         TopUpTransaction transaction = getTransactionById(transactionId);
@@ -99,19 +93,15 @@ public class TopUpServiceImpl implements TopUpService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status cannot be empty");
         }
 
-        // Update status di database lokal dulu
         transaction.setStatus(newStatus);
         TopUpTransaction updatedTransaction = topUpTransactionRepository.save(transaction);
 
-        // Cek: Apakah status berubah menjadi Success?
-        // Dan pastikan sebelumnya belum success (supaya saldo ga nambah 2x kalau diklik ulang)
+
         if ("Success".equalsIgnoreCase(newStatus) && !"Success".equalsIgnoreCase(oldStatus)) {
             try {
-                // Panggil fungsi update saldo ke Profile Service
+              
                 updateBalanceInProfileService(transaction.getEndUserId(), transaction.getAmount());
             } catch (Exception e) {
-                // Log Error tapi jangan batalkan status 'Success' transaksi (Distributed System best practice)
-                // Atau kalau mau strict, bisa throw RuntimeException biar rollback DB lokal.
                 System.err.println("!!! CRITICAL ERROR: GAGAL UPDATE SALDO USER !!!");
                 System.err.println("User ID: " + transaction.getEndUserId());
                 System.err.println("Error: " + e.getMessage());
@@ -121,7 +111,6 @@ public class TopUpServiceImpl implements TopUpService {
         return updatedTransaction;
     }
 
-    // [PBI-BE-TU5] Soft Delete Transaction
     @Override
     public void deleteTopUpTransaction(UUID transactionId) {
         TopUpTransaction transaction = getTransactionById(transactionId);
@@ -129,17 +118,11 @@ public class TopUpServiceImpl implements TopUpService {
         topUpTransactionRepository.save(transaction);
     }
 
-    // ========================================================================
-    // INTEGRASI PROFILE SERVICE (GET -> CALCULATE -> UPDATE)
-    // ========================================================================
     private void updateBalanceInProfileService(UUID userId, Long topUpAmount) {
-        // Target URL: http://localhost:8081/api/users/{id}
         String url = profileServiceUrl + "/api/users/" + userId; 
-        
-        // Ambil Token Superadmin dari request saat ini
+
         String token = getTokenFromRequest();
 
-        // 1. GET Data User Sekarang (Untuk tahu saldo awal)
         ProfileResponseDTO currentProfile = webClient.get()
                 .uri(url)
                 .header(HttpHeaders.AUTHORIZATION, token)
@@ -151,16 +134,14 @@ public class TopUpServiceImpl implements TopUpService {
             throw new RuntimeException("Gagal mengambil data user dari Profile Service (Response Null)");
         }
 
-        // 2. Hitung Saldo Baru
         BigDecimal currentSaldo = currentProfile.getData().getSaldo();
         if (currentSaldo == null) currentSaldo = BigDecimal.ZERO;
 
         BigDecimal addAmount = BigDecimal.valueOf(topUpAmount);
         BigDecimal newSaldo = currentSaldo.add(addAmount);
 
-        // 3. PUT Update Data User (Dengan Saldo Baru)
         Map<String, Object> payload = new HashMap<>();
-        // Payload harus sesuai DTO UpdateUserRequest temanmu
+
         payload.put("saldo", newSaldo); 
 
         webClient.put()
@@ -168,18 +149,17 @@ public class TopUpServiceImpl implements TopUpService {
                 .header(HttpHeaders.AUTHORIZATION, token)
                 .bodyValue(payload)
                 .retrieve()
-                .toBodilessEntity() // Kita cuma butuh status 200 OK
+                .toBodilessEntity() 
                 .block();
         
         System.out.println(">>> SALDO UPDATED SUCCESS: " + currentSaldo + " + " + topUpAmount + " = " + newSaldo);
     }
 
-    // Helper: Ambil Token dari Header Request
     private String getTokenFromRequest() {
         ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attrs != null) {
             return attrs.getRequest().getHeader(HttpHeaders.AUTHORIZATION);
         }
-        return null; // Atau throw error jika wajib ada
+        return null; 
     }
 }

@@ -21,7 +21,7 @@ public class PaymentMethodRestController {
     private PaymentMethodService paymentMethodService;
 
     @GetMapping("/all")
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'CUSTOMER')")
     public ResponseEntity<List<PaymentMethod>> getAllPaymentMethods() {
         return ResponseEntity.ok(paymentMethodService.getAllPaymentMethods());
     }

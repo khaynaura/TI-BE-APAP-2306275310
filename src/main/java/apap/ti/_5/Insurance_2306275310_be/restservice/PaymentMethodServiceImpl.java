@@ -20,13 +20,11 @@ public class PaymentMethodServiceImpl implements PaymentMethodService {
     @Autowired
     private PaymentMethodRepository paymentMethodRepository;
 
-    // [PBI-BE-TU6] Get All Payment Methods (yg terhapus hidden by @Where)
     @Override
     public List<PaymentMethod> getAllPaymentMethods() {
         return paymentMethodRepository.findAll();
     }
 
-    // [PBI-BE-TU7] Create Payment Method
     @Override
     public PaymentMethod addPaymentMethod(AddPaymentMethodRequestDTO request) {
         PaymentMethod paymentMethod = new PaymentMethod();
@@ -37,7 +35,6 @@ public class PaymentMethodServiceImpl implements PaymentMethodService {
         return paymentMethodRepository.save(paymentMethod);
     }
 
-    // [PBI-BE-TU8] Update Status Payment Method (Active/Inactive)
     @Override
     public PaymentMethod updateStatusPaymentMethod(UUID id, UpdatePaymentMethodStatusRequestDTO request) {
         PaymentMethod paymentMethod = paymentMethodRepository.findById(id)
@@ -47,7 +44,6 @@ public class PaymentMethodServiceImpl implements PaymentMethodService {
         return paymentMethodRepository.save(paymentMethod);
     }
 
-    // [PBI-BE-TU9] Soft Delete Payment Method
     @Override
     public void deletePaymentMethod(UUID id) {
         PaymentMethod paymentMethod = paymentMethodRepository.findById(id)

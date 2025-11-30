@@ -43,7 +43,7 @@ docker-push:
     - docker push $DOCKER_IMAGE_NAME:$IMAGE_TAG
   only:
     # Ubah branch ini jika kamu menggunakan branch CI/CD yang berbeda
-    - feat/praktikum-9
+    - tk
 
 # --- STAGE 3: DEPLOY ---
 deploy:
@@ -91,4 +91,4 @@ deploy:
       "
   only:
     # Ubah branch ini jika kamu menggunakan branch CI/CD yang berbeda
-    - feat/praktikum-9
+    - tk

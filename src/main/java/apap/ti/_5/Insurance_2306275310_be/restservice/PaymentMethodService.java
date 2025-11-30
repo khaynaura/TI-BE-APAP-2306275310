@@ -8,11 +8,9 @@ import java.util.List;
 import java.util.UUID;
 
 public interface PaymentMethodService {
-    // Basic Features
     PaymentMethod addPaymentMethod(AddPaymentMethodRequestDTO request);
     List<PaymentMethod> getAllPaymentMethods();
 
-    // --- TAMBAHAN BARU (Supaya PBI Lengkap) ---
     PaymentMethod updateStatusPaymentMethod(UUID id, UpdatePaymentMethodStatusRequestDTO request);
     void deletePaymentMethod(UUID id);
 }
