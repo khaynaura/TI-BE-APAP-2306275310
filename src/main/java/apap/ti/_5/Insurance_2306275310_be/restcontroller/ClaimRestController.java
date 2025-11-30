@@ -27,7 +27,6 @@ public class ClaimRestController {
 
     private final ClaimService claimService;
 
-    // --- HELPER METHODS UNTUK SECURITY ---
     
     private String getCurrentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
